@@ -496,38 +496,35 @@ def read(path: str, start_line: int = 1, end_line: int = 200) -> str:
 
 
 def _inferir_ruta_archivo(content: str) -> str:
-    """Infiere el nombre de archivo más adecuado cuando el LLM omite el parámetro 'path'."""
+    """Infiere universalmente el nombre y extensión de archivo más adecuado sin depender de listas cerradas."""
     try:
-        # A. Buscar si en el plan activo (AGENT_TODOS) se menciona un archivo explícito con extensión
+        # 1. Si en el plan de tareas se menciona un archivo explícito con extensión
         for t in AGENT_TODOS:
             desc = t.get("description", "") or t.get("task", "") or ""
-            m = re.search(r"([a-zA-Z0-9_\-\.]+\.(?:html|js|css|py|json|md|txt))", desc, re.IGNORECASE)
+            m = re.search(r"([a-zA-Z0-9_\-\.]+\.(?:html|js|css|py|json|md|txt|sh|bat))", desc, re.IGNORECASE)
             if m:
                 return Path(m.group(1).strip()).name
 
-        # B. Si el plan menciona nombres de juegos o apps comunes (tetris, snake, flappy, pong, etc.)
-        for t in AGENT_TODOS:
-            desc_lower = (t.get("description", "") or t.get("task", "") or "").lower()
-            for game_word in ("tetris", "snake", "flappy", "pong", "breakout", "pacman", "space_invaders", "calc"):
-                if game_word in desc_lower:
-                    return f"{game_word}.html"
-
-        # C. Si es HTML con etiqueta <title>
+        # 2. Si es HTML y contiene etiqueta <title>, derivar nombre slugificado
         m_title = re.search(r"<title>([^<]+)</title>", content, re.IGNORECASE)
         if m_title:
-            title_raw = m_title.group(1).strip().lower()
-            title_slug = re.sub(r"[^\w\-_]", "_", title_raw)
-            title_slug = re.sub(r"_+", "_", title_slug).strip("_")
-            if title_slug:
-                return f"{title_slug}.html"
+            raw_title = m_title.group(1).strip().lower()
+            slug = re.sub(r"[^\w\-_]", "_", raw_title)
+            slug = re.sub(r"_+", "_", slug).strip("_")
+            if slug and len(slug) <= 40:
+                return f"{slug}.html"
 
-        # D. Por tipo de contenido
+        # 3. Clasificación universal por tipo de contenido
         if "<!DOCTYPE" in content.upper() or "<HTML" in content.upper():
             return "index.html"
-        if re.search(r"^(import |def |class )", content, re.MULTILINE):
+        if re.search(r"^(import |def |class |if __name__)", content, re.MULTILINE):
             return "main.py"
-        if content.strip().startswith("{") and content.strip().endswith("}"):
+        if (content.strip().startswith("{") and content.strip().endswith("}")) or (content.strip().startswith("[") and content.strip().endswith("]")):
             return "data.json"
+        if re.search(r"^(# |## |### )", content, re.MULTILINE):
+            return "README.md"
+        if "function" in content or "const " in content or "let " in content:
+            return "app.js"
     except Exception:
         pass
 
@@ -1603,14 +1600,14 @@ def construir_system_prompt(thinking: bool) -> str:
         f"- `web_fetch(url)`: descarga el texto de una URL específica.\n"
         f"- `memory_store(action, note)`: lee o guarda notas persistentes del proyecto en `.anticli_memory.md`.\n"
         f"- `preview(target, open_browser)`: levanta un servidor web local y abre el juego o herramienta en el navegador.\n\n"
-        f"Reglas de oro:\n"
-        f"1. En tareas de creación (como un juego o herramienta web), define un plan conciso con `todo_write` (ej. 3 pasos: Arquitectura y visuales -> Mecánicas, Juice y WebAudio -> Validación y Preview) y complétalo ÍNTEGRAMENTE sin detenerte a medias.\n"
-        f"2. NUNCA entregues esqueletos incompletos ni preguntes al usuario si desea añadirle sonido o partículas: implementa SIEMPRE el juego 100% completo, con audio WebAudio integrado, partículas procedurales, Juice y controles táctiles/teclado.\n"
-        f"3. Al terminar de escribir el código con `write`, valida con `validate_code` y lánzalo inmediatamente al navegador con `preview`.\n"
-        f"4. Dale una identidad visual memorable, moderna y pulida a cada proyecto (evitando que todos los juegos se vean idénticos pero asegurando que todos se vean increíbles y con acabado profesional).\n"
-        f"5. Para modificar archivos existentes grandes, usa `edit` o `patch_lines` en vez de reescribir todo con `write`.\n"
-        f"6. En Windows, NUNCA ejecutes herramientas de Linux como 'sed' o 'grep' en bash; usa 'edit', 'patch_lines', 'grep_search' o 'read'.\n"
-        f"7. Sé directo, técnico y conciso. Responde en español.\n"
+        f"Reglas de oro universales:\n"
+        f"1. Completitud Total: Cuando el usuario pida crear cualquier software (herramienta, juego, dashboard, utilidad, script o app), entrega la solución 100% TERMINADA, FUNCIONAL Y PULIDA. NUNCA entregues código a medias, ni placeholders ('// TODO'), ni hagas preguntas retóricas como '¿quieres que agregue X función?': implementa la versión definitiva directamente.\n"
+        f"2. Planificación Ágil: Inicia con `todo_write` definiendo de 2 a 4 etapas claras (Arquitectura/Estructura -> Lógica central/Interactividad -> Validación y Lanzamiento) y avanza cada paso hasta el 100% sin detenerte a mitad del flujo.\n"
+        f"3. Verificación y Lanzamiento Automático: Para código ejecutable o web, valida la sintaxis con `validate_code` y si es una interfaz web/HTML lánzala inmediatamente al navegador con `preview`.\n"
+        f"4. Dirección de Arte a Medida: Adapta la estética al dominio del proyecto. Herramientas técnicas deben verse como hardware de estudio o terminales tácticas; apps modernas deben tener tipografía real y espaciado pulido; juegos deben tener Game Feel (60 FPS, partículas, audio WebAudio procedural). Evita monocultivos visuales repetitivos.\n"
+        f"5. Cirugía en Proyectos Existentes: Para archivos existentes grandes, usa `inspect_code` o `read` y aplica cambios específicos con `edit` o `patch_lines` en lugar de reescribir todo con `write`.\n"
+        f"6. Compatibilidad Windows: NUNCA ejecutes utilidades Unix como 'sed' o 'grep' en bash; usa `edit`, `patch_lines`, `grep_search` o `read`.\n"
+        f"7. Economía de Tokens: Sé directo, técnico y conciso. Responde en español.\n"
         f"{directiva_plan}"
         f"{directiva_estilo}"
         f"{mem_bloque}"
