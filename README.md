@@ -1,4 +1,4 @@
-# AntiCli (v2.5)
+# AntiCli (v2.6)
 
 > Entorno agéntico y TUI quirúrgico para modelos locales (Gemma 4, DeepSeek, Qwen) vía `llama.cpp` con visor en vivo, dirección de arte camaleónica, auto-compactación inteligente de contexto y modos Plan/Loop.
 

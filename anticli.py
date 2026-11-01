@@ -32,7 +32,7 @@ from prompt_toolkit.history import FileHistory
 from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.styles import Style
 
-VERSION = "2.5"
+VERSION = "2.6"
 from rich.box import ROUNDED
 from rich.console import Console
 from rich.panel import Panel
@@ -2097,7 +2097,7 @@ def imprimir_banner(modelo: str, base_url: str, online: bool):
         else f" [muted]│ Auto-Compact:[/muted] [bold #38bdf8]{COMPACT_THRESHOLD_PCT:.0f}%[/bold #38bdf8]"
     )
     contenido = (
-        f"[brand]AntiCli v2.5[/brand] [muted]│[/muted] [bold white]{modelo}[/bold white] {estado_srv}{ctx_str}\n"
+        f"[brand]AntiCli v2.6[/brand] [muted]│[/muted] [bold white]{modelo}[/bold white] {estado_srv}{ctx_str}\n"
         f"[muted]Directorio:[/muted] [accent]{SESSION_CWD}[/accent] [muted]│[/muted] "
         f"[muted]Vista:[/muted] [warn]{VIEW_MODE.upper()}[/warn] [muted]│[/muted] "
         f"[muted]Arte:[/muted] [bold #a855f7]{ACTIVE_STYLE.upper()}[/bold #a855f7]\n"
@@ -2109,7 +2109,7 @@ def imprimir_banner(modelo: str, base_url: str, online: bool):
 
 
 def imprimir_ayuda():
-    t = Table(box=ROUNDED, border_style="#6366f1", title="[brand]Centro de Comandos AntiCli v2.5[/brand]", show_lines=False)
+    t = Table(box=ROUNDED, border_style="#6366f1", title="[brand]Centro de Comandos AntiCli v2.6[/brand]", show_lines=False)
     t.add_column("Comando / Atajo", style="bold #f59e0b", no_wrap=True)
     t.add_column("Categoría", style="#38bdf8")
     t.add_column("Descripción", style="white")
@@ -2181,7 +2181,7 @@ async def main():
     SESSION_CWD = Path.cwd().resolve()
 
     parser = argparse.ArgumentParser(
-        description="AntiCli v2.5: Entorno agéntico quirúrgico con visor en vivo, auto-compactación de contexto y skills bajo demanda."
+        description="AntiCli v2.6: Entorno agéntico quirúrgico con visor en vivo, auto-compactación de contexto y skills bajo demanda."
     )
     parser.add_argument("prompt", nargs="*", help="Prompt directo para ejecución de un solo turno.")
     parser.add_argument(
