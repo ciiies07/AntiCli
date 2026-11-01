@@ -110,7 +110,7 @@ AGENT_TODOS: list[dict[str, str]] = []
 ACTIVE_SKILLS: set[str] = set()
 SKILLS_ON_DEMAND: bool = True
 ACTIVE_STYLE: str = "auto"
-ACTIVE_LANG: str = os.environ.get("ANTICLI_LANG", "es").lower()
+ACTIVE_LANG: str = os.environ.get("ANTICLI_LANG", "en").lower()
 
 # Configuración de Auto-Compactación y Continuidad de Contexto
 COMPACT_THRESHOLD_PCT: float = 70.0  # Umbral del 70% de n_ctx para auto-compactación
@@ -272,11 +272,18 @@ def _mostrar_codigo_en_vivo(path: str, content: str, start_line: int = 1, titulo
     lines = content.splitlines()
     muestra = "\n".join(lines[:max_lines])
     lexer = _detectar_lexer(path)
-    sub = (
-        f"[muted]+{len(lines) - max_lines} líneas más (usa /show {path} para ver completo)[/muted]"
-        if len(lines) > max_lines
-        else f"[muted]{len(lines)} líneas[/muted]"
-    )
+    if ACTIVE_LANG == "en":
+        sub = (
+            f"[muted]+{len(lines) - max_lines} more lines (use /show {path} to view all)[/muted]"
+            if len(lines) > max_lines
+            else f"[muted]{len(lines)} lines[/muted]"
+        )
+    else:
+        sub = (
+            f"[muted]+{len(lines) - max_lines} líneas más (usa /show {path} para ver completo)[/muted]"
+            if len(lines) > max_lines
+            else f"[muted]{len(lines)} líneas[/muted]"
+        )
     syntax = Syntax(
         muestra,
         lexer,
@@ -320,7 +327,8 @@ def _mostrar_diff_en_vivo(path: str, old_content: str, new_content: str):
     preview = "\n".join(diff_lines[:max_lines])
     sub = f"[ok]+{added}[/ok] [err]-{removed}[/err]"
     if len(diff_lines) > max_lines:
-        sub += f" [muted](+{len(diff_lines) - max_lines} líneas de diff omitidas)[/muted]"
+        lbl_diff_omitted = "diff lines omitted" if ACTIVE_LANG == "en" else "líneas de diff omitidas"
+        sub += f" [muted](+{len(diff_lines) - max_lines} {lbl_diff_omitted})[/muted]"
     syntax = Syntax(preview, "diff", theme="monokai", background_color="default", word_wrap=True)
     console.print(
         Panel(
@@ -411,7 +419,8 @@ def bash(command: str, timeout: int = 120) -> str:
                         console.print(f"    [muted]│[/muted] {clean_line}", highlight=False)
                         shown_live += 1
                     elif shown_live == max_live_lines:
-                        console.print("    [muted]│ ... (ejecutando y capturando resto de salida)[/muted]")
+                        lbl_more = "... (executing and capturing remaining output)" if ACTIVE_LANG == "en" else "... (ejecutando y capturando resto de salida)"
+                        console.print(f"    [muted]│ {lbl_more}[/muted]")
                         shown_live += 1
 
         reader_thread = threading.Thread(target=_reader, daemon=True)
@@ -426,7 +435,8 @@ def bash(command: str, timeout: int = 120) -> str:
                     process.kill()
             else:
                 process.kill()
-            console.print(f"  [err]✗ Timeout tras {timeout}s[/err]")
+            lbl_to = f"Timeout after {timeout}s" if ACTIVE_LANG == "en" else f"Timeout tras {timeout}s"
+            console.print(f"  [err]✗ {lbl_to}[/err]")
             partial = "\n".join(collected_lines[-30:])
             return f"Error: El comando excedió el tiempo límite de {timeout} segundos.\nSalida parcial:\n{partial}"
 
@@ -435,12 +445,15 @@ def bash(command: str, timeout: int = 120) -> str:
         output = "\n".join(collected_lines).strip()
 
         if process.returncode != 0:
-            console.print(f"  [err]✗ Salida: {process.returncode}[/err] [muted]({elapsed:.1f}s)[/muted]")
+            lbl_exit = "Exit" if ACTIVE_LANG == "en" else "Salida"
+            console.print(f"  [err]✗ {lbl_exit}: {process.returncode}[/err] [muted]({elapsed:.1f}s)[/muted]")
         elif VIEW_MODE != "quiet":
+            lbl_lines = "lines" if ACTIVE_LANG == "en" else "líneas"
+            lbl_in = "in" if ACTIVE_LANG == "en" else "en"
             console.print(
-                f"  [ok]✓ ok[/ok] [muted]({len(collected_lines)} líneas en {elapsed:.1f}s)[/muted]"
+                f"  [ok]✓ ok[/ok] [muted]({len(collected_lines)} {lbl_lines} {lbl_in} {elapsed:.1f}s)[/muted]"
             )
-        return _truncate_output(output) if output else "(Comando ejecutado sin salida)"
+        return _truncate_output(output) if output else ("(Command executed with no output)" if ACTIVE_LANG == "en" else "(Comando ejecutado sin salida)")
     except Exception as e:
         return f"Error ejecutando bash: {e}"
 
@@ -457,8 +470,9 @@ def read(path: str, start_line: int = 1, end_line: int = 200) -> str:
     if cb:
         return cb
     if VIEW_MODE != "quiet":
+        lbl_r_lines = "lines" if ACTIVE_LANG == "en" else "líneas"
         console.print(
-            f"  [tool.read]📖 read[/tool.read] [bold white]{path}[/bold white] [muted](líneas {start_line}-{end_line})[/muted]"
+            f"  [tool.read]📖 read[/tool.read] [bold white]{path}[/bold white] [muted]({lbl_r_lines} {start_line}-{end_line})[/muted]"
         )
     try:
         p = _resolve_path(path)
@@ -559,9 +573,10 @@ def write(path: str, content: str) -> str:
     lines_count = len(content.splitlines())
     if VIEW_MODE != "quiet":
         nota_fences = " [warn](fences ``` limpiados auto)[/warn]" if fue_limpiado else ""
+        lbl_w_lines = "lines" if ACTIVE_LANG == "en" else "líneas"
         console.print(
             f"  [tool.write]📝 write[/tool.write] [bold white]{path}[/bold white] "
-            f"[muted]({lines_count} líneas, {len(content)} bytes)[/muted]{nota_fences}"
+            f"[muted]({lines_count} {lbl_w_lines}, {len(content)} bytes)[/muted]{nota_fences}"
         )
     try:
         p = _resolve_path(path)
@@ -695,9 +710,10 @@ def patch_lines(path: str, start_line: int, end_line: int, new_content: str) -> 
         )
 
     if VIEW_MODE != "quiet":
+        lbl_p_lines = "lines" if ACTIVE_LANG == "en" else "líneas"
         console.print(
             f"  [tool.edit]🩹 patch_lines[/tool.edit] [bold white]{path}[/bold white] "
-            f"[muted](líneas {start_line}-{end_line})[/muted]"
+            f"[muted]({lbl_p_lines} {start_line}-{end_line})[/muted]"
         )
     try:
         p = _resolve_path(path)
@@ -760,8 +776,9 @@ def glob_files(pattern: str = "**/*", path: str = ".") -> str:
                 break
         if VIEW_MODE == "full" and resultados:
             muestra = ", ".join(resultados[:8])
-            extra = f" (+{len(resultados) - 8} más)" if len(resultados) > 8 else ""
-            console.print(f"    [muted]↳ {len(resultados)} encontrado(s): {muestra}{extra}[/muted]")
+            extra = (f" (+{len(resultados) - 8} more)" if ACTIVE_LANG == "en" else f" (+{len(resultados) - 8} más)") if len(resultados) > 8 else ""
+            lbl_found = "found" if ACTIVE_LANG == "en" else "encontrado(s)"
+            console.print(f"    [muted]↳ {len(resultados)} {lbl_found}: {muestra}{extra}[/muted]")
         return "\n".join(resultados) if resultados else "No se encontraron archivos con ese patrón."
     except Exception as e:
         return f"Error en glob_files: {e}"
@@ -817,7 +834,8 @@ def grep_search(pattern: str, path: str = ".", file_pattern: str = "*") -> str:
             for m in matches[:6]:
                 console.print(f"    [muted]│ {m}[/muted]", highlight=False)
             if len(matches) > 6:
-                console.print(f"    [muted]│ ... (+{len(matches) - 6} coincidencias más)[/muted]")
+                lbl_more_matches = f"... (+{len(matches) - 6} more matches)" if ACTIVE_LANG == "en" else f"... (+{len(matches) - 6} coincidencias más)"
+                console.print(f"    [muted]│ {lbl_more_matches}[/muted]")
 
         return "\n".join(matches) if matches else f"Sin coincidencias para '{pattern}'."
     except Exception as e:
@@ -941,7 +959,8 @@ def _finalizar_plan_al_terminar_turno():
 
 def _imprimir_panel_todos():
     if not AGENT_TODOS:
-        console.print("  [muted]No hay tareas registradas en este momento.[/muted]")
+        lbl_empty = "No tasks registered at this time." if ACTIVE_LANG == "en" else "No hay tareas registradas en este momento."
+        console.print(f"  [muted]{lbl_empty}[/muted]")
         return
     total = len(AGENT_TODOS)
     done_count = sum(1 for t in AGENT_TODOS if t.get("status", "").lower() == "done")
@@ -950,20 +969,25 @@ def _imprimir_panel_todos():
     filled = int((done_count / total) * bar_width) if total > 0 else 0
     barra = f"[ok]{'━' * filled}[/ok][muted]{'─' * (bar_width - filled)}[/muted] [bold white]{pct}%[/bold white]"
 
-    lineas = [f"  Progreso: {barra} [muted]({done_count}/{total} completadas)[/muted]\n"]
+    lbl_prog = "Progress" if ACTIVE_LANG == "en" else "Progreso"
+    lbl_done = "completed" if ACTIVE_LANG == "en" else "completadas"
+    lbl_in_prog = "● in progress" if ACTIVE_LANG == "en" else "● en curso"
+    lbl_title = f"[brand]📋 Live Execution Plan ({done_count}/{total})[/brand]" if ACTIVE_LANG == "en" else f"[brand]📋 Plan de Ejecución en Vivo ({done_count}/{total})[/brand]"
+
+    lineas = [f"  {lbl_prog}: {barra} [muted]({done_count}/{total} {lbl_done})[/muted]\n"]
     for i, t in enumerate(AGENT_TODOS, 1):
         status = t.get("status", "pending").lower()
         desc = t.get("task", "")
         if status == "done":
             lineas.append(f"  [ok]✔ {i}.[/ok] [strike_muted]{desc}[/strike_muted]")
         elif status == "in_progress":
-            lineas.append(f"  [warn]▶ {i}.[/warn] [bold white]{desc}[/bold white] [warn]● en curso[/warn]")
+            lineas.append(f"  [warn]▶ {i}.[/warn] [bold white]{desc}[/bold white] [warn]{lbl_in_prog}[/warn]")
         else:
             lineas.append(f"  [muted]○ {i}. {desc}[/muted]")
     console.print(
         Panel(
             "\n".join(lineas),
-            title=f"[brand]📋 Plan de Ejecución en Vivo ({done_count}/{total})[/brand]",
+            title=lbl_title,
             border_style="#10b981" if done_count == total else "#6366f1",
             box=ROUNDED,
             padding=(0, 1),
@@ -1634,31 +1658,55 @@ def construir_system_prompt(thinking: bool) -> str:
             skills_bloque = "\n\n# SKILLS ESPECIALIZADAS FIJADAS\n" + "\n\n".join(partes_skills)
 
     directiva_estilo = ""
-    if ACTIVE_STYLE != "auto" and ACTIVE_STYLE in DESIGN_PRESETS:
-        directiva_estilo = (
-            f"\n\n# DIRECCIÓN DE ARTE ACTIVA FIJADA POR EL USUARIO: {ACTIVE_STYLE.upper()}\n"
-            f"Aplica obligatoriamente este paradigma visual en cualquier interfaz o experiencia gráfica: {DESIGN_PRESETS[ACTIVE_STYLE]}"
-        )
+    if ACTIVE_LANG == "en":
+        if ACTIVE_STYLE != "auto" and ACTIVE_STYLE in DESIGN_PRESETS:
+            directiva_estilo = (
+                f"\n\n# ACTIVE ART DIRECTION SET BY USER: {ACTIVE_STYLE.upper()}\n"
+                f"You MUST apply this visual paradigm to any UI or graphical experience: {DESIGN_PRESETS[ACTIVE_STYLE]}"
+            )
+        else:
+            directiva_estilo = (
+                "\n\n# CHAMELEON ART DIRECTION (AUTO MODE)\n"
+                "1. ORIGINAL FIDELITY BY DEFAULT: If the user requests a well-known game or tool "
+                "(e.g., Tetris, Pac-Man, Flappy Bird, Snake, Space Invaders, Minesweeper, Pong), "
+                "RESPECT ITS ORIGINAL HISTORICAL STYLE, PALETTE, AND TYPOGRAPHY BY DEFAULT.\n"
+                "2. ALTERNATIVE STYLES ONLY ON DEMAND: Only apply alternative themes (e.g. neon, cyberpunk, "
+                "brutalism) if explicitly requested (e.g., 'tetris in neon') or if a specific `/style` was selected.\n"
+                "3. NEW CREATIONS: For original ideas without historical reference, craft a cohesive, domain-specific visual atmosphere."
+            )
+        directiva_plan = ""
+        if PLAN_MODE:
+            directiva_plan = (
+                "\n\n# ACTIVE PLAN MODE (ARCHITECT MODE - READ ONLY)\n"
+                "You are in Plan Mode. You are FORBIDDEN from creating or modifying files (`write`, `edit`, `patch_lines`, `bash` are locked).\n"
+                "Your sole job is to investigate code using `read`, `inspect_code`, `glob_files`, `grep_search` or web search, "
+                "design the technical architecture, and structure a numbered task roadmap using `todo_write` for user review."
+            )
     else:
-        directiva_estilo = (
-            "\n\n# DIRECCIÓN DE ARTE CAMALEÓNICA (MODO AUTO)\n"
-            "1. FIDELIDAD AL ORIGINAL POR DEFECTO: Si el usuario pide un juego o herramienta conocido "
-            "(ej. Tetris, Pac-Man, Flappy Bird, Snake, Space Invaders, Buscaminas, Pong), "
-            "RESPETA POR DEFECTO Y EN PRIMER LUGAR SU ESTILO, PALETA DE COLORES Y TIPOGRAFÍA ORIGINAL HISTÓRICA.\n"
-            "2. ESTILOS ALTERNATIVOS SOLO BAJO DEMANDA: Solo aplica estilos alternativos (ej. neón, cyberpunk, "
-            "brutalismo, etc.) si el usuario lo pide explícitamente en su solicitud (ej. 'tetris en neón', 'pacman cyberpunk') "
-            "o si activó un comando `/style` concreto. Si no se especifica estilo, el diseño original se respeta al 100%.\n"
-            "3. CREACIONES NUEVAS: Si es una idea original sin referente previo, deduce una atmósfera visual coherente con su temática."
-        )
-
-    directiva_plan = ""
-    if PLAN_MODE:
-        directiva_plan = (
-            "\n\n# MODO PLAN ACTIVO (ESTRICTO MODO ARQUITECTO - SOLO LECTURA)\n"
-            "Estás en Modo Plan. Tienes PROHIBIDO crear o modificar archivos (`write`, `edit`, `patch_lines`, `bash` están bloqueados).\n"
-            "Tu tarea exclusiva es investigar el código con `read`, `inspect_code`, `glob_files`, `grep_search` o buscar en internet, "
-            "diseñar la arquitectura técnica y estructurar un plan de tareas numerado con `todo_write` para revisión del usuario."
-        )
+        if ACTIVE_STYLE != "auto" and ACTIVE_STYLE in DESIGN_PRESETS:
+            directiva_estilo = (
+                f"\n\n# DIRECCIÓN DE ARTE ACTIVA FIJADA POR EL USUARIO: {ACTIVE_STYLE.upper()}\n"
+                f"Aplica obligatoriamente este paradigma visual en cualquier interfaz o experiencia gráfica: {DESIGN_PRESETS[ACTIVE_STYLE]}"
+            )
+        else:
+            directiva_estilo = (
+                "\n\n# DIRECCIÓN DE ARTE CAMALEÓNICA (MODO AUTO)\n"
+                "1. FIDELIDAD AL ORIGINAL POR DEFECTO: Si el usuario pide un juego o herramienta conocido "
+                "(ej. Tetris, Pac-Man, Flappy Bird, Snake, Space Invaders, Buscaminas, Pong), "
+                "RESPETA POR DEFECTO Y EN PRIMER LUGAR SU ESTILO, PALETA DE COLORES Y TIPOGRAFÍA ORIGINAL HISTÓRICA.\n"
+                "2. ESTILOS ALTERNATIVOS SOLO BAJO DEMANDA: Solo aplica estilos alternativos (ej. neón, cyberpunk, "
+                "brutalismo, etc.) si el usuario lo pide explícitamente en su solicitud (ej. 'tetris en neón', 'pacman cyberpunk') "
+                "o si activó un comando `/style` concreto. Si no se especifica estilo, el diseño original se respeta al 100%.\n"
+                "3. CREACIONES NUEVAS: Si es una idea original sin referente previo, deduce una atmósfera visual coherente con su temática."
+            )
+        directiva_plan = ""
+        if PLAN_MODE:
+            directiva_plan = (
+                "\n\n# MODO PLAN ACTIVO (ESTRICTO MODO ARQUITECTO - SOLO LECTURA)\n"
+                "Estás en Modo Plan. Tienes PROHIBIDO crear o modificar archivos (`write`, `edit`, `patch_lines`, `bash` están bloqueados).\n"
+                "Tu tarea exclusiva es investigar el código con `read`, `inspect_code`, `glob_files`, `grep_search` o buscar en internet, "
+                "diseñar la arquitectura técnica y estructurar un plan de tareas numerado con `todo_write` para revisión del usuario."
+            )
 
     mem_file = _get_memory_file()
     mem_bloque = ""
@@ -1851,11 +1899,12 @@ def verificar_servidor(base_url: str) -> tuple[bool, list[str]]:
 
 def _formatear_resumen_args(args: dict) -> str:
     partes = []
+    lbl_l = "lines" if ACTIVE_LANG == "en" else "líneas"
     for k, v in args.items():
         if isinstance(v, str):
             if len(v) > 48 or "\n" in v:
                 lineas = len(v.splitlines())
-                partes.append(f"{k}=<{lineas} líneas, {len(v)} chars>")
+                partes.append(f"{k}=<{lineas} {lbl_l}, {len(v)} chars>")
             else:
                 partes.append(f"{k}={v!r}")
         else:
@@ -1892,7 +1941,8 @@ async def ejecutar_turno(agent: Agent, mensaje: str, skills_inyectadas: set[str]
                 skills_inyectadas.update(nuevas_skills)
             if VIEW_MODE != "quiet":
                 etiquetas = ", ".join(f"[bold #a855f7]{s}[/bold #a855f7]" for s in nuevas_skills)
-                console.print(f"  [muted]⚡ Skills activadas bajo demanda para esta tarea:[/muted] {etiquetas}")
+                lbl_sk = "⚡ Skills activated on-demand for this task:" if ACTIVE_LANG == "en" else "⚡ Skills activadas bajo demanda para esta tarea:"
+                console.print(f"  [muted]{lbl_sk}[/muted] {etiquetas}")
             textos_sk = [SKILLS_CATALOG[s]["content"] for s in nuevas_skills if s in SKILLS_CATALOG]
             bloques_contexto_turno.append(
                 "[GUÍAS ESPECIALIZADAS ACTIVADAS BAJO DEMANDA PARA ESTA TAREA]\n" + "\n\n".join(textos_sk)
@@ -1911,7 +1961,8 @@ async def ejecutar_turno(agent: Agent, mensaje: str, skills_inyectadas: set[str]
             if isinstance(chunk, Thought):
                 if VIEW_MODE != "quiet":
                     if not cabecera_pensamiento_impresa:
-                        console.print("  [brand]💭 Razonando...[/brand]")
+                        lbl_reas = "💭 Reasoning..." if ACTIVE_LANG == "en" else "💭 Razonando..."
+                        console.print(f"  [brand]{lbl_reas}[/brand]")
                         cabecera_pensamiento_impresa = True
                     console.print(chunk.text, style="thought", end="", highlight=False)
                 continue
@@ -1923,8 +1974,9 @@ async def ejecutar_turno(agent: Agent, mensaje: str, skills_inyectadas: set[str]
                     cabecera_pensamiento_impresa = False
                 if VIEW_MODE == "full":
                     resumen = _formatear_resumen_args(chunk.args or {})
+                    lbl_call = "⚙ preparing call →" if ACTIVE_LANG == "en" else "⚙ preparando llamada →"
                     console.print(
-                        f"  [muted]⚙ preparando llamada →[/muted] [accent]{chunk.name}[/accent][muted]({resumen})[/muted]"
+                        f"  [muted]{lbl_call}[/muted] [accent]{chunk.name}[/accent][muted]({resumen})[/muted]"
                     )
                 continue
 
@@ -1933,7 +1985,8 @@ async def ejecutar_turno(agent: Agent, mensaje: str, skills_inyectadas: set[str]
                 if not err_msg and isinstance(chunk.result, str) and chunk.result.lower().startswith("error"):
                     err_msg = chunk.result
                 if err_msg:
-                    console.print(f"  [err]✗ Error en {chunk.name}: {err_msg}[/err]")
+                    lbl_err = "Error in" if ACTIVE_LANG == "en" else "Error en"
+                    console.print(f"  [err]✗ {lbl_err} {chunk.name}: {err_msg}[/err]")
                 continue
 
             if isinstance(chunk, Text):
@@ -1951,7 +2004,8 @@ async def ejecutar_turno(agent: Agent, mensaje: str, skills_inyectadas: set[str]
                     if open_tag in token:
                         en_pensamiento = True
                         if VIEW_MODE != "quiet" and not cabecera_pensamiento_impresa:
-                            console.print("  [brand]💭 Razonando...[/brand]")
+                            lbl_reas = "💭 Reasoning..." if ACTIVE_LANG == "en" else "💭 Razonando..."
+                            console.print(f"  [brand]{lbl_reas}[/brand]")
                             cabecera_pensamiento_impresa = True
                         token = token.replace(open_tag, "")
 
@@ -2008,7 +2062,8 @@ async def ejecutar_turno(agent: Agent, mensaje: str, skills_inyectadas: set[str]
             if n_ctx > 0:
                 usados = SERVER_INFO["used_tokens"]
                 pct_ctx = (usados / n_ctx) * 100
-                ctx_info = f" │ 🧠 Ctx: {usados:,}/{n_ctx:,} ({pct_ctx:.1f}% / umbral {COMPACT_THRESHOLD_PCT:.0f}%)"
+                lbl_thr = "threshold" if ACTIVE_LANG == "en" else "umbral"
+                ctx_info = f" │ 🧠 Ctx: {usados:,}/{n_ctx:,} ({pct_ctx:.1f}% / {lbl_thr} {COMPACT_THRESHOLD_PCT:.0f}%)"
                 if pct_ctx >= COMPACT_THRESHOLD_PCT:
                     requiere_compactacion = True
             console.print(
@@ -2123,7 +2178,8 @@ def mostrar_arbol_proyecto(max_depth: int = 2):
                 lineas.append(f"{prefijo}{conector}[white]{item.name}[/white] [muted]({size_kb:.1f} KB)[/muted]")
 
     _recorrer(SESSION_CWD, "", 1)
-    console.print(Panel("\n".join(lineas), title="[brand]Estructura del Proyecto[/brand]", border_style="bright_black", box=ROUNDED))
+    tree_title = "[brand]Project Structure[/brand]" if ACTIVE_LANG == "en" else "[brand]Estructura del Proyecto[/brand]"
+    console.print(Panel("\n".join(lineas), title=tree_title, border_style="bright_black", box=ROUNDED))
 
 
 def mostrar_tabla_skills():
@@ -2218,11 +2274,15 @@ def imprimir_banner(modelo: str, base_url: str, online: bool):
     if ACTIVE_SKILLS:
         skills_txt = ", ".join(f"[#a855f7]{s}[/#a855f7]" for s in sorted(ACTIVE_SKILLS))
         if SKILLS_ON_DEMAND:
-            skills_txt += " [muted]+ ⚡ Bajo Demanda[/muted]"
+            skills_txt += " [muted]+ ⚡ " + ("On-Demand" if ACTIVE_LANG == "en" else "Bajo Demanda") + "[/muted]"
     elif SKILLS_ON_DEMAND:
-        skills_txt = "[#a855f7]⚡ Bajo Demanda (Auto-Smart)[/#a855f7] [muted](ahorro de tokens activo)[/muted]"
+        skills_txt = (
+            "[#a855f7]⚡ On-Demand (Auto-Smart)[/#a855f7] [muted](token saving active)[/muted]"
+            if ACTIVE_LANG == "en"
+            else "[#a855f7]⚡ Bajo Demanda (Auto-Smart)[/#a855f7] [muted](ahorro de tokens activo)[/muted]"
+        )
     else:
-        skills_txt = "ninguna"
+        skills_txt = "none" if ACTIVE_LANG == "en" else "ninguna"
     n_ctx = SERVER_INFO.get("n_ctx", 0)
     ctx_str = (
         f" [muted]│ Ctx:[/muted] [bold #38bdf8]{n_ctx // 1024}k ({n_ctx:,} tok, auto-compact {COMPACT_THRESHOLD_PCT:.0f}%)[/bold #38bdf8]"
@@ -2363,9 +2423,9 @@ async def main():
     parser.add_argument("prompt", nargs="*", help="Prompt directo para ejecución de un solo turno / Direct prompt for single-turn execution.")
     parser.add_argument(
         "--lang",
-        choices=["es", "en"],
-        default=os.environ.get("ANTICLI_LANG", "es"),
-        help="Interface and model language: 'es' (Español) or 'en' (English) (default: es or $ANTICLI_LANG).",
+        choices=["en", "es"],
+        default=os.environ.get("ANTICLI_LANG", "en"),
+        help="Interface and model language: 'en' (English, default) or 'es' (Spanish) (or $ANTICLI_LANG).",
     )
     parser.add_argument(
         "--model",
@@ -2600,31 +2660,45 @@ async def main():
                         sub_cmd = user_input[5:].strip().lower()
                         if sub_cmd in ("on", "1", "true"):
                             PLAN_MODE = True
-                            console.print(
+                            msg = (
+                                "  [brand]📋 PLAN MODE ACTIVATED (Read-Only / Architecture).[/brand]\n"
+                                "  [muted]File modification tools locked. Agent will investigate and structure roadmap with todo_write.[/muted]"
+                                if ACTIVE_LANG == "en" else
                                 "  [brand]📋 MODO PLAN ACTIVADO (Solo lectura / Arquitectura).[/brand]\n"
                                 "  [muted]Herramientas de modificación bloqueadas. El agente investigará y estructurará el plan con todo_write.[/muted]"
                             )
+                            console.print(msg)
                             config = crear_config(modelo_actual, base_url, thinking_activo)
                             break
                         elif sub_cmd in ("off", "0", "false"):
                             PLAN_MODE = False
-                            console.print("  [ok]✓ Modo Plan desactivado. Herramientas quirúrgicas habilitadas.[/ok]")
+                            msg = "  [ok]✓ Plan Mode deactivated. Surgical tools enabled.[/ok]" if ACTIVE_LANG == "en" else "  [ok]✓ Modo Plan desactivado. Herramientas quirúrgicas habilitadas.[/ok]"
+                            console.print(msg)
                             config = crear_config(modelo_actual, base_url, thinking_activo)
                             break
                         elif sub_cmd == "status":
-                            st = "[brand]ACTIVADO (Solo Lectura)[/brand]" if PLAN_MODE else "[ok]DESACTIVADO (Ejecución libre)[/ok]"
-                            console.print(f"  [muted]Estado Modo Plan:[/muted] {st}")
+                            if ACTIVE_LANG == "en":
+                                st = "[brand]ACTIVATED (Read-Only)[/brand]" if PLAN_MODE else "[ok]DEACTIVATED (Free execution)[/ok]"
+                                console.print(f"  [muted]Plan Mode Status:[/muted] {st}")
+                            else:
+                                st = "[brand]ACTIVADO (Solo Lectura)[/brand]" if PLAN_MODE else "[ok]DESACTIVADO (Ejecución libre)[/ok]"
+                                console.print(f"  [muted]Estado Modo Plan:[/muted] {st}")
                             _imprimir_panel_todos()
                             continue
                         else:
                             PLAN_MODE = not PLAN_MODE
                             if PLAN_MODE:
-                                console.print(
+                                msg = (
+                                    "  [brand]📋 PLAN MODE ACTIVATED (Read-Only / Architecture).[/brand]\n"
+                                    "  [muted]File modification tools locked. Agent will investigate and structure roadmap with todo_write.[/muted]"
+                                    if ACTIVE_LANG == "en" else
                                     "  [brand]📋 MODO PLAN ACTIVADO (Solo lectura / Arquitectura).[/brand]\n"
                                     "  [muted]Herramientas de modificación bloqueadas. El agente investigará y estructurará el plan con todo_write.[/muted]"
                                 )
+                                console.print(msg)
                             else:
-                                console.print("  [ok]✓ Modo Plan desactivado. Herramientas quirúrgicas habilitadas.[/ok]")
+                                msg = "  [ok]✓ Plan Mode deactivated. Surgical tools enabled.[/ok]" if ACTIVE_LANG == "en" else "  [ok]✓ Modo Plan desactivado. Herramientas quirúrgicas habilitadas.[/ok]"
+                                console.print(msg)
                             config = crear_config(modelo_actual, base_url, thinking_activo)
                             break
 
@@ -2643,11 +2717,22 @@ async def main():
                         if len(partes) > 1 and partes[1].isdigit():
                             max_iter = int(partes[1])
 
+                        if ACTIVE_LANG == "en":
+                            loop_body = (
+                                f"Starting autonomous multi-step execution (maximum {max_iter} steps).\n"
+                                f"[muted]Press Ctrl+C at any time to pause the loop without losing progress.[/muted]"
+                            )
+                            loop_title = "[brand]🔄 AUTONOMOUS LOOP MODE STARTED[/brand]"
+                        else:
+                            loop_body = (
+                                f"Iniciando ejecución autónoma por etapas (máximo {max_iter} pasos).\n"
+                                f"[muted]Presiona Ctrl+C en cualquier momento para pausar el bucle sin perder el progreso.[/muted]"
+                            )
+                            loop_title = "[brand]🔄 MODO LOOP AUTÓNOMO INICIADO[/brand]"
                         console.print(
                             Panel(
-                                f"Iniciando ejecución autónoma por etapas (máximo {max_iter} pasos).\n"
-                                f"[muted]Presiona Ctrl+C en cualquier momento para pausar el bucle sin perder el progreso.[/muted]",
-                                title="[brand]🔄 MODO LOOP AUTÓNOMO INICIADO[/brand]",
+                                loop_body,
+                                title=loop_title,
                                 border_style="#6366f1",
                                 box=ROUNDED,
                             )
@@ -2900,48 +2985,91 @@ async def main():
                     # --- COMANDOS DE CREACIÓN GUIADA (/game, /3d, /tool, /design) ---
                     if user_input.startswith("/game "):
                         idea = user_input[6:].strip()
-                        user_input = (
-                            f"MODO GAME ARCHITECT ACTIVADO: Diseña y construye un videojuego completo y jugable para: '{idea}'. "
-                            f"1) Crea primero un plan con `todo_write` y actualiza cada paso con `todo_check` conforme avances. "
-                            f"2) ESTILO VISUAL Y FIDELIDAD HISTÓRICA: Si '{idea}' es un juego clásico/conocido (ej. Tetris, Pac-Man, Flappy Bird, Snake, Space Invaders, Pong, Buscaminas, etc.), "
-                            f"RESPETA INICIALMENTE SU ESTILO, PALETA DE COLORES Y TIPOGRAFÍA ORIGINAL HISTÓRICA. Solo aplica un estilo alternativo (como neón, synthwave o cyberpunk) "
-                            f"si el usuario lo especificó explícitamente en su pedido (ej. 'tetris en neón'); si no se especifica, el estilo original se respeta al 100%. "
-                            f"3) Implementa Game Loop con DeltaTime seguro (cap 0.05s), estados (MENU, PLAYING, PAUSE, GAME OVER), "
-                            f"prevención de scroll con flechas/espacio, sistema de partículas, screen-shake, HUD y WebAudio procedural acorde al estilo del juego. "
-                            f"4) Escribe el código puro con `write` (sin bloques ```) y al terminar ábrelo con `preview`."
-                        )
+                        if ACTIVE_LANG == "en":
+                            user_input = (
+                                f"GAME ARCHITECT MODE ACTIVATED: Design and build a complete, polished, and playable game for: '{idea}'. "
+                                f"1) Start with `todo_write` defining stages and update each step with `todo_check`. "
+                                f"2) VISUAL STYLE & HISTORICAL FIDELITY: If '{idea}' is a classic/known game (e.g. Tetris, Pac-Man, Flappy Bird, Snake, Space Invaders, Pong, Minesweeper), "
+                                f"RESPECT ITS ORIGINAL HISTORICAL STYLE, PALETTE, AND TYPOGRAPHY BY DEFAULT. Only apply alternative themes (e.g. neon, cyberpunk) "
+                                f"if explicitly requested in the prompt. "
+                                f"3) Implement DeltaTime game loop (capped at 0.05s), states (MENU, PLAYING, PAUSE, GAME OVER), "
+                                f"arrow/space scroll prevention, particle system, screen-shake, HUD, and procedural WebAudio sound effects. "
+                                f"4) Write pure code using `write` (never wrap in ```) and open immediately with `preview` upon completion."
+                            )
+                        else:
+                            user_input = (
+                                f"MODO GAME ARCHITECT ACTIVADO: Diseña y construye un videojuego completo y jugable para: '{idea}'. "
+                                f"1) Crea primero un plan con `todo_write` y actualiza cada paso con `todo_check` conforme avances. "
+                                f"2) ESTILO VISUAL Y FIDELIDAD HISTÓRICA: Si '{idea}' es un juego clásico/conocido (ej. Tetris, Pac-Man, Flappy Bird, Snake, Space Invaders, Pong, Buscaminas, etc.), "
+                                f"RESPETA INICIALMENTE SU ESTILO, PALETA DE COLORES Y TIPOGRAFÍA ORIGINAL HISTÓRICA. Solo aplica un estilo alternativo (como neón, synthwave o cyberpunk) "
+                                f"si el usuario lo especificó explícitamente en su pedido (ej. 'tetris en neón'); si no se especifica, el estilo original se respeta al 100%. "
+                                f"3) Implementa Game Loop con DeltaTime seguro (cap 0.05s), estados (MENU, PLAYING, PAUSE, GAME OVER), "
+                                f"prevención de scroll con flechas/espacio, sistema de partículas, screen-shake, HUD y WebAudio procedural acorde al estilo del juego. "
+                                f"4) Escribe el código puro con `write` (sin bloques ```) y al terminar ábrelo con `preview`."
+                            )
                     elif user_input.startswith("/3d "):
                         idea = user_input[4:].strip()
-                        user_input = (
-                            f"MODO 3D WEBGL & VOXEL ARCHITECT ACTIVADO: Crea una experiencia o juego 3D interactivo para: '{idea}'. "
-                            f"1) Planifica con `todo_write` y actualiza el progreso con `todo_check`. "
-                            f"2) Usa Three.js vía importmap ES Modules, InstancedMesh para rendimiento, iluminación atmosférica con niebla, "
-                            f"EffectComposer + UnrealBloomPass, controles suaves y UI superpuesta elegante. "
-                            f"3) Guarda el código puro con `write` (sin bloques ```) y ábrelo con `preview`."
-                        )
+                        if ACTIVE_LANG == "en":
+                            user_input = (
+                                f"3D WEBGL & VOXEL ARCHITECT MODE ACTIVATED: Create an interactive 3D game or experience for: '{idea}'. "
+                                f"1) Plan with `todo_write` and track progress with `todo_check`. "
+                                f"2) Use Three.js via ES Modules importmap, InstancedMesh for performance, atmospheric fog lighting, "
+                                f"EffectComposer + UnrealBloomPass, smooth controls, and an elegant overlaid UI. "
+                                f"3) Save pure code with `write` (no ``` blocks) and open with `preview`."
+                            )
+                        else:
+                            user_input = (
+                                f"MODO 3D WEBGL & VOXEL ARCHITECT ACTIVADO: Crea una experiencia o juego 3D interactivo para: '{idea}'. "
+                                f"1) Planifica con `todo_write` y actualiza el progreso con `todo_check`. "
+                                f"2) Usa Three.js vía importmap ES Modules, InstancedMesh para rendimiento, iluminación atmosférica con niebla, "
+                                f"EffectComposer + UnrealBloomPass, controles suaves y UI superpuesta elegante. "
+                                f"3) Guarda el código puro con `write` (sin bloques ```) y ábrelo con `preview`."
+                            )
                     elif user_input.startswith("/tool "):
                         idea = user_input[6:].strip()
-                        user_input = (
-                            f"MODO TOOL CRAFTER ACTIVADO: Diseña y construye una herramienta completa y funcional para: '{idea}'. "
-                            f"1) Planifica los pasos con `todo_write` y actualízalos con `todo_check`. "
-                            f"2) Aplica una arquitectura modular, manejo de errores, datos de ejemplo listos para usar y una interfaz "
-                            f"oscura sobria y colorida. "
-                            f"3) Verifica su funcionamiento (con `bash` o `preview`)."
-                        )
+                        if ACTIVE_LANG == "en":
+                            user_input = (
+                                f"TOOL CRAFTER MODE ACTIVATED: Design and build a complete, production-grade tool for: '{idea}'. "
+                                f"1) Plan steps with `todo_write` and update with `todo_check`. "
+                                f"2) Apply modular architecture, error handling, ready-to-use sample data, and a sleek, colorful dark UI. "
+                                f"3) Verify execution (with `bash` or `preview`)."
+                            )
+                        else:
+                            user_input = (
+                                f"MODO TOOL CRAFTER ACTIVADO: Diseña y construye una herramienta completa y funcional para: '{idea}'. "
+                                f"1) Planifica los pasos con `todo_write` y actualízalos con `todo_check`. "
+                                f"2) Aplica una arquitectura modular, manejo de errores, datos de ejemplo listos para usar y una interfaz "
+                                f"oscura sobria y colorida. "
+                                f"3) Verifica su funcionamiento (con `bash` o `preview`)."
+                            )
                     elif user_input.startswith("/design "):
                         idea = user_input[8:].strip()
-                        estilo_nota = (
-                            f"aplicando el paradigma '{ACTIVE_STYLE.upper()}' ({DESIGN_PRESETS[ACTIVE_STYLE]})"
-                            if ACTIVE_STYLE != "auto"
-                            else "eligiendo el paradigma de Dirección de Arte más original y adecuado (Swiss Editorial, Tactical HUD, Spatial Glass, Organic Botanical o Cyber-Pop Arcade)"
-                        )
-                        user_input = (
-                            f"MODO DIRECCIÓN DE ARTE UI/UX ACTIVADO: Crea una interfaz, aplicación o experiencia gráfica memorable para: '{idea}', {estilo_nota}. "
-                            f"1) Planifica con `todo_write` y actualiza el progreso con `todo_check`. "
-                            f"2) Importa Google Fonts reales, añade texturas (grano SVG, cuadrícula técnica o shaders/canvas procedural), "
-                            f"micro-interacciones con curvas elásticas y componentes interactivos 100% funcionales. "
-                            f"3) Escribe el código puro con `write` y ábrelo con `preview` al finalizar."
-                        )
+                        if ACTIVE_LANG == "en":
+                            estilo_nota = (
+                                f"applying the '{ACTIVE_STYLE.upper()}' paradigm ({DESIGN_PRESETS[ACTIVE_STYLE]})"
+                                if ACTIVE_STYLE != "auto"
+                                else "selecting the most appropriate and distinctive Art Direction paradigm (Swiss Editorial, Tactical HUD, Spatial Glass, Organic Botanical, or Cyber-Pop Arcade)"
+                            )
+                            user_input = (
+                                f"UI/UX ART DIRECTION MODE ACTIVATED: Craft a memorable interface, application, or graphic experience for: '{idea}', {estilo_nota}. "
+                                f"1) Plan with `todo_write` and track progress with `todo_check`. "
+                                f"2) Import real Google Fonts, apply textures (SVG grain, technical grid, or procedural canvas/shaders), "
+                                f"spring-curve micro-interactions, and 100% functional interactive components. "
+                                f"3) Write pure code with `write` and launch with `preview` upon completion."
+                            )
+                        else:
+                            estilo_nota = (
+                                f"aplicando el paradigma '{ACTIVE_STYLE.upper()}' ({DESIGN_PRESETS[ACTIVE_STYLE]})"
+                                if ACTIVE_STYLE != "auto"
+                                else "eligiendo el paradigma de Dirección de Arte más original y adecuado (Swiss Editorial, Tactical HUD, Spatial Glass, Organic Botanical o Cyber-Pop Arcade)"
+                            )
+                            user_input = (
+                                f"MODO DIRECCIÓN DE ARTE UI/UX ACTIVADO: Crea una interfaz, aplicación o experiencia gráfica memorable para: '{idea}', {estilo_nota}. "
+                                f"1) Planifica con `todo_write` y actualiza el progreso con `todo_check`. "
+                                f"2) Importa Google Fonts reales, añade texturas (grano SVG, cuadrícula técnica o shaders/canvas procedural), "
+                                f"micro-interacciones con curvas elásticas y componentes interactivos 100% funcionales. "
+                                f"3) Escribe el código puro con `write` y ábrelo con `preview` al finalizar."
+                            )
 
                     # Procesar archivos @adjuntos
                     prompt_final = procesar_adjuntos(user_input)
