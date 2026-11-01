@@ -33,7 +33,7 @@ from prompt_toolkit.history import FileHistory
 from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.styles import Style
 
-VERSION = "2.6"
+VERSION = "2.6.1"
 from rich.box import ROUNDED
 from rich.console import Console
 from rich.panel import Panel
@@ -2296,7 +2296,7 @@ def imprimir_banner(modelo: str, base_url: str, online: bool):
     lbl_cmds = "Comandos clave" if ACTIVE_LANG == "es" else "Key commands"
     lang_name = "Español" if ACTIVE_LANG == "es" else "English"
     contenido = (
-        f"[brand]AntiCli v2.6[/brand] [muted]│[/muted] [bold white]{modelo}[/bold white] {estado_srv}{ctx_str} [muted]│[/muted] [bold #fbbf24]{lang_name}[/bold #fbbf24]\n"
+        f"[brand]AntiCli v2.6.1[/brand] [muted]│[/muted] [bold white]{modelo}[/bold white] {estado_srv}{ctx_str} [muted]│[/muted] [bold #fbbf24]{lang_name}[/bold #fbbf24]\n"
         f"[muted]{lbl_dir}:[/muted] [accent]{SESSION_CWD}[/accent] [muted]│[/muted] "
         f"[muted]{lbl_view}:[/muted] [warn]{VIEW_MODE.upper()}[/warn] [muted]│[/muted] "
         f"[muted]{lbl_art}:[/muted] [bold #a855f7]{ACTIVE_STYLE.upper()}[/bold #a855f7]\n"
@@ -2308,7 +2308,7 @@ def imprimir_banner(modelo: str, base_url: str, online: bool):
 
 
 def imprimir_ayuda():
-    titulo = "[brand]Centro de Comandos AntiCli v2.6[/brand]" if ACTIVE_LANG == "es" else "[brand]AntiCli Command Center v2.6[/brand]"
+    titulo = "[brand]Centro de Comandos AntiCli v2.6.1[/brand]" if ACTIVE_LANG == "es" else "[brand]AntiCli Command Center v2.6.1[/brand]"
     col_cmd = "Comando / Atajo" if ACTIVE_LANG == "es" else "Command / Shortcut"
     col_cat = "Categoría" if ACTIVE_LANG == "es" else "Category"
     col_desc = "Descripción" if ACTIVE_LANG == "es" else "Description"
@@ -2418,7 +2418,7 @@ async def main():
     SESSION_CWD = Path.cwd().resolve()
 
     parser = argparse.ArgumentParser(
-        description="AntiCli v2.6: Entorno agéntico quirúrgico con visor en vivo, auto-compactación de contexto y skills bajo demanda."
+        description="AntiCli v2.6.1: Entorno agéntico quirúrgico con visor en vivo, auto-compactación de contexto y skills bajo demanda."
     )
     parser.add_argument("prompt", nargs="*", help="Prompt directo para ejecución de un solo turno / Direct prompt for single-turn execution.")
     parser.add_argument(

@@ -1,4 +1,4 @@
-# AntiCli (v2.6)
+# AntiCli (v2.6.1)
 
 <p align="center">
   <a href="README.es.md"><b>Español</b></a> • <a href="README.md"><b>English</b></a>
