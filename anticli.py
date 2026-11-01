@@ -497,34 +497,44 @@ def read(path: str, start_line: int = 1, end_line: int = 200) -> str:
 
 def _inferir_ruta_archivo(content: str) -> str:
     """Infiere el nombre de archivo más adecuado cuando el LLM omite el parámetro 'path'."""
-    # A. Buscar si en el plan activo (AGENT_TODOS) se menciona un archivo
-    for t in AGENT_TODOS:
-        desc = t.get("description", "") or t.get("task", "")
-        m = re.search(r"[a-zA-Z0-9_\-\./\]+\.(html|js|css|py|json|md|txt)", desc, re.IGNORECASE)
-        if m:
-            return Path(m.group(0).strip()).name
+    try:
+        # A. Buscar si en el plan activo (AGENT_TODOS) se menciona un archivo explícito con extensión
+        for t in AGENT_TODOS:
+            desc = t.get("description", "") or t.get("task", "") or ""
+            m = re.search(r"([a-zA-Z0-9_\-\.]+\.(?:html|js|css|py|json|md|txt))", desc, re.IGNORECASE)
+            if m:
+                return Path(m.group(1).strip()).name
 
-    # B. Si es HTML con <title>
-    m_title = re.search(r"<title>([^<]+)</title>", content, re.IGNORECASE)
-    if m_title:
-        title_raw = m_title.group(1).strip().lower()
-        title_slug = re.sub(r"[^\w\-_]", "_", title_raw)
-        title_slug = re.sub(r"_+", "_", title_slug).strip("_")
-        if title_slug:
-            return f"{title_slug}.html"
+        # B. Si el plan menciona nombres de juegos o apps comunes (tetris, snake, flappy, pong, etc.)
+        for t in AGENT_TODOS:
+            desc_lower = (t.get("description", "") or t.get("task", "") or "").lower()
+            for game_word in ("tetris", "snake", "flappy", "pong", "breakout", "pacman", "space_invaders", "calc"):
+                if game_word in desc_lower:
+                    return f"{game_word}.html"
 
-    # C. Por contenido
-    if "<!DOCTYPE" in content.upper() or "<HTML" in content.upper():
-        return "index.html"
-    if re.search(r"^(import |def |class )", content, re.MULTILINE):
-        return "main.py"
-    if content.strip().startswith("{") and content.strip().endswith("}"):
-        return "data.json"
+        # C. Si es HTML con etiqueta <title>
+        m_title = re.search(r"<title>([^<]+)</title>", content, re.IGNORECASE)
+        if m_title:
+            title_raw = m_title.group(1).strip().lower()
+            title_slug = re.sub(r"[^\w\-_]", "_", title_raw)
+            title_slug = re.sub(r"_+", "_", title_slug).strip("_")
+            if title_slug:
+                return f"{title_slug}.html"
+
+        # D. Por tipo de contenido
+        if "<!DOCTYPE" in content.upper() or "<HTML" in content.upper():
+            return "index.html"
+        if re.search(r"^(import |def |class )", content, re.MULTILINE):
+            return "main.py"
+        if content.strip().startswith("{") and content.strip().endswith("}"):
+            return "data.json"
+    except Exception:
+        pass
 
     return "index.html"
 
 
-def write(path: str = "", content: str = "", filepath: str = "", filename: str = "", file: str = "") -> str:
+def write(path: str = "", content: str = "", filepath: str = "", filename: str = "", file: str = "", **kwargs) -> str:
     """Crea o sobrescribe un archivo completo con el contenido especificado.
     
     Args:
@@ -542,6 +552,12 @@ def write(path: str = "", content: str = "", filepath: str = "", filename: str =
         )
 
     # Si el LLM omitió 'path' o usó un alias alternativo, resolver o inferir
+    # Si el LLM usó otro nombre en kwargs (ej. target, name, file_path)
+    if not path:
+        for k in ("target", "name", "file_path", "filename", "filepath", "file"):
+            if k in kwargs and kwargs[k]:
+                path = str(kwargs[k]).strip()
+                break
     path = (path or filepath or filename or file or "").strip()
     if not path:
         path = _inferir_ruta_archivo(content)
