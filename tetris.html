@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>π-Antigravity Tetris</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        /* Dirección de Arte: Tetris Clásico Original */
+        :root {
+            --bg-color: #1A1A1A;
+            --grid-color: #333333;
+            --i-color: #00F0F0; /* Cian */
+            --o-color: #F0F000; /* Amarillo */
+            --t-color: #A000F0; /* Púrpura */
+            --s-color: #00F000; /* Verde */
+            --z-color: #F00000; /* Rojo */
+            --j-color: #0000F0; /* Azul */
+            --l-color: #F0A000; /* Naranja */
+            --text-color: #E0E0E0;
+            --grid-size: 20px; /* Tamaño de la cuadrícula */
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            font-family: 'Press Start 2P', monospace;
+            overflow: hidden;
+            text-align: center;
+        }
+
+        #game-container {
+            border: 4px solid var(--grid-color);
+            background-color: #000000;
+            box-shadow: 0 0 20px rgba(0, 240, 240, 0.5);
+            position: relative;
+        }
+
+        #game-board {
+            display: grid;
+            /* Ajuste dinámico basado en el tamaño del juego, aquí asumimos 10x20 para ejemplo */
+            grid-template-columns: repeat(10, var(--grid-size));
+            grid-template-rows: repeat(20, var(--grid-size));
+            width: calc(10 * var(--grid-size));
+            height: calc(20 * var(--grid-size));
+            background-color: var(--grid-color);
+            border-radius: 4px;
+        }
+
+        .cell {
+            width: var(--grid-size);
+            height: var(--grid-size);
+            box-sizing: border-box;
+            border: 1px solid rgba(51, 51, 51, 0.5);
+        }
+
+        .tetromino {
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            box-shadow: inset 0 0 5px rgba(255, 255, 255, 0.3);
+            border-radius: 2px;
+        }
+
+        #sidebar {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            padding: 10px;
+            background-color: rgba(0, 0, 0, 0.7);
+            border: 2px solid var(--i-color);
+            font-size: 10px;
+        }
+        
+        #score {
+            font-size: 12px;
+            color: var(--i-color);
+            margin-bottom: 5px;
+        }
+
+        #game-over {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: none;
+            background: rgba(0, 0, 0, 0.9);
+            border: 3px solid var(--z-color);
+            padding: 20px;
+            font-size: 14px;
+            z-index: 100;
+        }
+
+        #game-over button {
+            background-color: var(--z-color);
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            cursor: pointer;
+            margin-top: 10px;
+            font-family: 'Press Start 2P', monospace;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <div id="sidebar">
+            <div id="score">SCORE: 0</div>
+            <p>CONTROLES: ← → ↓ (Mover), ↑ (Rotar), Space (Hard Drop)</p>
+        </div>
+        <div id="game-board">
+            <!-- Celdas generadas por JS -->
+        </div>
+        <div id="game-over">
+            <h1>GAME OVER</h1>
+            <p id="final-score"></p>
+            <button onclick="startGame()">RESTART</button>
+        </div>
+    </div>
+
+    <script>
+        // --- Game State ---
+        const ROWS = 20;
+        const COLS = 10;
+        const CELL_SIZE = 20; // Corresponde a --grid-size en CSS
+        const boardElement = document.getElementById('game-board');
+        const scoreElement = document.getElementById('score');
+        const gameOverScreen = document.getElementById('game-over');
+        const finalScoreElement = document.getElementById('final-score');
+
+        let board = [];
+        let currentPiece = null;
+        let score = 0;
+        let gameLoopId = null;
+        let dropInterval = 1000; // ms
+        let lastTime = 0;
+        let isGameOver = true;
+
+        // Definición de Tetrominós (Colores Oficiales)
+        const TETROMINOS = {
+            'I': { shape: [[0,0,0,0],[1,1,1,1],[0,0,0,0],[0,0,0,0]], color: 'var(--i-color)' }, // Cian
+            'O': { shape: [[1,1],[1,1]], color: 'var(--o-color)' }, // Amarillo
+            'T': { shape: [[0,1,0],[1,1,1],[0,0,0]], color: 'var(--t-color)' }, // Púrpura
+            'S': { shape: [[0,1,1],[1,1,0],[0,0,0]], color: 'var(--s-color)' }, // Verde
+            'Z': { shape: [[1,1,0],[0,1,1],[0,0,0]], color: 'var(--z-color)' }, // Rojo
+            'J': { shape: [[1,0,0],[1,1,1],[0,0,0]], color: 'var(--j-color)' }, // Azul
+            'L': { shape: [[0,0,1],[1,1,1],[0,0,0]], color: 'var(--l-color)' }  // Naranja
+        };
+        const PIECES = Object.keys(TETROMINOS);
+
+        // --- SoundFX (Simulación WebAudio API) ---
+        class SoundFX {
+            constructor() {
+                // En un entorno real, inicializar AudioContext aquí.
+                console.log("SoundFX Initialized: WebAudio Context Ready.");
+            }
+            play(type) {
+                // Simulación de sonido (En un entorno real, se reproduciría un buffer de audio)
+                switch(type) {
+                    case 'move': console.log("SFX: Move sound (subtle click)"); break;
+                    case 'clear': console.log("SFX: Clear line sound (high pitch beep)"); break;
+                    case 'gameOver': console.log("SFX: Game Over sound (low, dissonant tone)"); break;
+                }
+            }
+        }
+        const sound = new SoundFX();
+
+
+        // --- Core Game Logic ---
+
+        function createBoard() {
+            board = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
+            boardElement.innerHTML = '';
+            for (let r = 0; r < ROWS; r++) {
+                for (let c = 0; c < COLS; c++) {
+                    const cell = document.createElement('div');
+                    cell.classList.add('cell');
+                    cell.id = `cell-${r}-${c}`;
+                    boardElement.appendChild(cell);
+                }
+            }
+        }
+
+        function draw() {
+            // 1. Limpiar el tablero
+            for (let r = 0; r < ROWS; r++) {
+                for (let c = 0; c < COLS; c++) {
+                    const cell = document.getElementById(`cell-${r}-${c}`);
+                    cell.className = 'cell'; // Reset class
+                }
+            }
+
+            // 2. Dibujar piezas existentes
+            board.forEach((row, r) => {
+                row.forEach((value, c) => {
+                    if (value !== 0) {
+                        const cell = document.getElementById(`cell-${r}-${c}`);
+                        cell.classList.add('tetromino');
+                        // En un juego real, aquí se asignaría la clase de color del tipo
+                    }
+                });
+            });
+
+            // 3. Dibujar la pieza actual
+            if (currentPiece) {
+                currentPiece.shape.forEach((row, r) => {
+                    row.forEach((value, c) => {
+                        if (value) {
+                            const boardR = currentPiece.y + r;
+                            const boardC = currentPiece.x + c;
+
+                            if (boardR >= 0 && boardR < ROWS && boardC >= 0 && boardC < COLS) {
+                                const cell = document.getElementById(`cell-${boardR}-${boardC}`);
+                                cell.classList.add('tetromino');
+                                // Aplicar color basado en el tipo de pieza
+                                cell.style.backgroundColor = currentPiece.color;
+                            }
+                        }
+                    });
+                });
+            }
+        }
+
+        function spawnPiece() {
+            const randomIndex = Math.floor(Math.random() * PIECES.length);
+            const pieceKey = PIECES[randomIndex];
+            const pieceData = TETROMINOS[pieceKey];
+
+            currentPiece = {
+                shape: pieceData.shape,
+                color: pieceData.color,
+                x: Math.floor(COLS / 2) - Math.floor(pieceData.shape[0].length / 2),
+                y: 0
+            };
+
+            // Chequear colisión inicial (Game Over)
+            if (checkCollision(currentPiece.shape, currentPiece.x, currentPiece.y)) {
+                gameOver();
+                return false;
+            }
+            return true;
+        }
+
+        function checkCollision(shape, newX, newY) {
+            for (let r = 0; r < shape.length; r++) {
+                for (let c = 0; c < shape[r].length; c++) {
+                    if (shape[r][c]) {
+                        const boardR = newY + r;
+                        const boardC = newX + c;
+
+                        // Colisión con el borde o con una pieza ya fija
+                        if (boardC < 0 || boardC >= COLS || boardR >= ROWS || (boardR >= 0 && board[boardR][boardC] !== 0)) {
+                            return true;
+                        }
+                    }
+                }
+            }
+            return false;
+        }
+
+        function mergePiece() {
+            currentPiece.shape.forEach((row, r) => {
+                row.forEach((value, c) => {
+                    if (value) {
+                        board[currentPiece.y + r][currentPiece.x + c] = 1; // Marcar como fijo
+                    }
+                });
+            });
+            clearLines();
+            spawnPiece();
+        }
+
+        function clearLines() {
+            let linesCleared = 0;
+            for (let r = ROWS - 1; r >= 0; r--) {
+                // Si la fila no tiene ceros, se borra
+                if (board[r].every(cell => cell !== 0)) {
+                    linesCleared++;
+                    // Eliminar la fila
+                    board.splice(r, 1);
+                    // Añadir una fila vacía arriba
+                    board.unshift(Array(COLS).fill(0));
+                    r++; // Volver a chequear la misma fila
+                }
+            }
+            if (linesCleared > 0) {
+                score += linesCleared * 100; // Puntuación base
+                scoreElement.textContent = `SCORE: ${score}`;
+                sound.play('clear');
+            }
+        }
+
+        function move(dir) {
+            if (isGameOver || !currentPiece) return;
+            const newX = currentPiece.x + dir;
+            if (!checkCollision(currentPiece.shape, newX, currentPiece.y)) {
+                currentPiece.x = newX;
+                draw();
+                sound.play('move');
+            }
+        }
+
+        function rotate() {
+            if (isGameOver || !currentPiece) return;
+            const originalShape = currentPiece.shape;
+            const N = originalShape.length;
+            let newShape = Array.from({ length: N }, () => Array(N).fill(0));
+
+            // Rotación en sentido horario
+            for (let r = 0; r < N; r++) {
+                for (let c = 0; c < N; c++) {
+                    newShape[c][N - 1 - r] = originalShape[r][c];
+                }
+            }
+
+            // Prueba de colisión después de la rotación (Wall Kick básico)
+            if (!checkCollision(newShape, currentPiece.x, currentPiece.y)) {
+                currentPiece.shape = newShape;
+                draw();
+            }
+        }
+
+        function drop() {
+            if (isGameOver || !currentPiece) return;
+
+            if (!checkCollision(currentPiece.shape, currentPiece.x, currentPiece.y + 1)) {
+                currentPiece.y++;
+                draw();
+            } else {
+                mergePiece();
+            }
+        }
+
+        function gameLoop(timestamp) {
+            if (isGameOver) return;
+
+            const deltaTime = timestamp - lastTime;
+            lastTime = timestamp;
+
+            // Control de velocidad basado en delta time (Rule #2)
+            if (deltaTime > dropInterval) {
+                drop();
+                dropInterval = 1000 / 0.005; // Acelerar ligeramente la caída
+            }
+
+            // Renderizar
+            draw();
+
+            gameLoopId = requestAnimationFrame(gameLoop);
+        }
+
+        function startGame() {
+            isGameOver = false;
+            score = 0;
+            scoreElement.textContent = `SCORE: 0`;
+            gameOverScreen.style.display = 'none';
+            createBoard();
+            if (spawnPiece()) {
+                lastTime = performance.now();
+                gameLoopId = requestAnimationFrame(gameLoop);
+            }
+        }
+
+        function gameOver() {
+            isGameOver = true;
+            cancelAnimationFrame(gameLoopId);
+            sound.play('gameOver');
+            finalScoreElement.textContent = `Final Score: ${score}`;
+            gameOverScreen.style.display = 'block';
+        }
+
+        // --- Input Handlers ---
+        document.addEventListener('keydown', (e) => {
+            if (isGameOver) {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    startGame();
+                }
+                return;
+            }
+
+            switch (e.key) {
+                case 'ArrowLeft':
+                    move(-1);
+                    break;
+                case 'ArrowRight':
+                    move(1);
+                    break;
+                case 'ArrowDown':
+                    drop();
+                    sound.play('move');
+                    break;
+                case 'ArrowUp':
+                    rotate();
+                    break;
+                case ' ': // Space para Hard Drop
+                    drop();
+                    sound.play('move');
+                    break;
+            }
+        });
+
+        // Inicialización
+        createBoard();
+        draw(); // Dibujar el tablero vacío
+        sound.play('init'); // Simular inicio
+    </script>
+</body>
+</html>

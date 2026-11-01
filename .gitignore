@@ -1,0 +1,23 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Scratch and test files
+scratch/
+*.tmp
+
+# Antigravity CLI runtime files
+.pi_memory.md
+.pi_backups/
+.pi_antigravity_history
+ultima_respuesta.md
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# OS specific
+Thumbs.db
+.DS_Store
