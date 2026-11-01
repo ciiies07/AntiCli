@@ -110,6 +110,7 @@ AGENT_TODOS: list[dict[str, str]] = []
 ACTIVE_SKILLS: set[str] = set()
 SKILLS_ON_DEMAND: bool = True
 ACTIVE_STYLE: str = "auto"
+ACTIVE_LANG: str = os.environ.get("ANTICLI_LANG", "es").lower()
 
 # Configuración de Auto-Compactación y Continuidad de Contexto
 COMPACT_THRESHOLD_PCT: float = 70.0  # Umbral del 70% de n_ctx para auto-compactación
@@ -1669,11 +1670,47 @@ def construir_system_prompt(thinking: bool) -> str:
         except Exception:
             pass
 
+    if ACTIVE_LANG == "en":
+        return (
+            f"{prefix}You are AntiCli, a minimalist, surgical software engineering, UI/UX art direction, and 2D/3D game creation "
+            f"terminal agent.\n"
+            f"Current environment: OS={os_info} | Directory={SESSION_CWD}\n\n"
+            f"You have this arsenal of 16 surgical tools:\n"
+            f"- `bash(command, timeout)`: executes console commands, git, tests, or build scripts.\n"
+            f"- `read(path, start_line, end_line)`: reads files with numbered lines.\n"
+            f"- `write(path, content)`: creates or overwrites an entire file. You MUST ALWAYS provide 'path' (e.g. path='index.html', 'app.py') and 'content' with complete code (NEVER wrap content with ``` markdown fences).\n"
+            f"- `edit(path, old_text, new_text)`: performs surgical text replacement on existing files.\n"
+            f"- `patch_lines(path, start_line, end_line, new_content)`: replaces exact line ranges by line number.\n"
+            f"- `validate_code(path)`: checks syntax errors in HTML/JS (using Node.js), Python, or JSON files before finishing.\n"
+            f"- `inspect_code(path)`: extracts class, function, and DOM ID outline without reading entire files.\n"
+            f"- `glob_files(pattern, path)`: finds files quickly by name or glob pattern.\n"
+            f"- `grep_search(pattern, path, file_pattern)`: searches code or regex with exact line numbers.\n"
+            f"- `todo_write(tasks_json)`: creates your visual task roadmap in the user console.\n"
+            f"- `todo_check(step_number, status)`: marks a roadmap step as 'done' or 'in_progress'.\n"
+            f"- `web_search(query, max_results)`: searches the web in real-time (documentation, libraries, APIs).\n"
+            f"- `web_fetch(url)`: fetches readable text from a specific URL.\n"
+            f"- `browser_action(url, action, selector, value, screenshot)`: browses using a real Chromium browser (Playwright), renders dynamic JS sites, extracts text, interacts (click, fill) or captures screenshots.\n"
+            f"- `memory_store(action, note)`: reads or saves persistent project notes in `.anticli_memory.md`.\n"
+            f"- `preview(target, open_browser)`: starts a local web server and opens the app or game in the browser.\n\n"
+            f"Universal Golden Rules:\n"
+            f"1. Total Completeness: When creating any software (tool, game, dashboard, utility, script, or app), deliver a 100% FINISHED, FUNCTIONAL, AND POLISHED solution. NEVER deliver half-baked skeletons, empty '// TODO' placeholders, or rhetorical questions: implement the definitive version directly.\n"
+            f"2. Agile Planning: Start with `todo_write` defining 2 to 4 clear stages (Architecture -> Core logic/Interactivity -> Validation & Preview) and complete every step to 100% without stopping midway.\n"
+            f"3. Automatic Verification & Preview: For executable or web code, validate syntax with `validate_code` and immediately launch it in the browser with `preview`.\n"
+            f"4. Tailored Art Direction: Adapt aesthetics to the project domain. Technical tools must look like studio hardware or tactical terminals; modern apps must have real typography and spacing; games must have Game Feel (60 FPS, particles, procedural WebAudio). Avoid repetitive AI templates.\n"
+            f"5. Surgical Edits: For existing large files, use `inspect_code` or `read` and apply targeted modifications with `edit` or `patch_lines` instead of rewriting everything with `write`.\n"
+            f"6. Cross-Platform Compatibility: Ensure scripts and commands work across Windows, Linux, and macOS.\n"
+            f"7. Token Economy: Be direct, technical, and concise. Respond in English.\n"
+            f"{directiva_plan}"
+            f"{directiva_estilo}"
+            f"{mem_bloque}"
+            f"{skills_bloque}"
+        )
+
     return (
         f"{prefix}Eres AntiCli, un agente de ingeniería de software, dirección de arte UI/UX y creación de videojuegos 2D/3D "
         f"de terminal minimalista y quirúrgico.\n"
         f"Entorno actual: SO={os_info} | Directorio={SESSION_CWD}\n\n"
-        f"Dispones de este arsenal de 15 herramientas:\n"
+        f"Dispones de este arsenal de 16 herramientas:\n"
         f"- `bash(command, timeout)`: ejecuta comandos de consola, git, tests o scripts.\n"
         f"- `read(path, start_line, end_line)`: lee archivos mostrando líneas numeradas.\n"
         f"- `write(path, content)`: crea o sobrescribe un archivo completo. SIEMPRE debes incluir 'path' con el nombre de archivo (ej. path='tetris.html', 'index.html', 'app.py') y 'content' con el código completo (NUNCA pongas bloques ``` dentro de `content`).\n"
@@ -1696,7 +1733,7 @@ def construir_system_prompt(thinking: bool) -> str:
         f"3. Verificación y Lanzamiento Automático: Para código ejecutable o web, valida la sintaxis con `validate_code` y si es una interfaz web/HTML lánzala inmediatamente al navegador con `preview`.\n"
         f"4. Dirección de Arte a Medida: Adapta la estética al dominio del proyecto. Herramientas técnicas deben verse como hardware de estudio o terminales tácticas; apps modernas deben tener tipografía real y espaciado pulido; juegos deben tener Game Feel (60 FPS, partículas, audio WebAudio procedural). Evita monocultivos visuales repetitivos.\n"
         f"5. Cirugía en Proyectos Existentes: Para archivos existentes grandes, usa `inspect_code` o `read` y aplica cambios específicos con `edit` o `patch_lines` en lugar de reescribir todo con `write`.\n"
-        f"6. Compatibilidad Windows: NUNCA ejecutes utilidades Unix como 'sed' o 'grep' en bash; usa `edit`, `patch_lines`, `grep_search` o `read`.\n"
+        f"6. Compatibilidad Multiplataforma: En Windows, no uses comandos exclusivos de Unix como 'sed' o 'grep'; usa 'edit', 'patch_lines', 'grep_search' o 'read'.\n"
         f"7. Economía de Tokens: Sé directo, técnico y conciso. Responde en español.\n"
         f"{directiva_plan}"
         f"{directiva_estilo}"
@@ -2192,53 +2229,97 @@ def imprimir_banner(modelo: str, base_url: str, online: bool):
         if n_ctx >= 1024
         else f" [muted]│ Auto-Compact:[/muted] [bold #38bdf8]{COMPACT_THRESHOLD_PCT:.0f}%[/bold #38bdf8]"
     )
+    lbl_dir = "Directorio" if ACTIVE_LANG == "es" else "Directory"
+    lbl_view = "Vista" if ACTIVE_LANG == "es" else "View"
+    lbl_art = "Arte" if ACTIVE_LANG == "es" else "Art"
+    lbl_lang = "Idioma" if ACTIVE_LANG == "es" else "Language"
+    lbl_cmds = "Comandos clave" if ACTIVE_LANG == "es" else "Key commands"
+    lang_name = "Español" if ACTIVE_LANG == "es" else "English"
     contenido = (
-        f"[brand]AntiCli v2.6[/brand] [muted]│[/muted] [bold white]{modelo}[/bold white] {estado_srv}{ctx_str}\n"
-        f"[muted]Directorio:[/muted] [accent]{SESSION_CWD}[/accent] [muted]│[/muted] "
-        f"[muted]Vista:[/muted] [warn]{VIEW_MODE.upper()}[/warn] [muted]│[/muted] "
-        f"[muted]Arte:[/muted] [bold #a855f7]{ACTIVE_STYLE.upper()}[/bold #a855f7]\n"
+        f"[brand]AntiCli v2.6[/brand] [muted]│[/muted] [bold white]{modelo}[/bold white] {estado_srv}{ctx_str} [muted]│[/muted] [bold #fbbf24]{lang_name}[/bold #fbbf24]\n"
+        f"[muted]{lbl_dir}:[/muted] [accent]{SESSION_CWD}[/accent] [muted]│[/muted] "
+        f"[muted]{lbl_view}:[/muted] [warn]{VIEW_MODE.upper()}[/warn] [muted]│[/muted] "
+        f"[muted]{lbl_art}:[/muted] [bold #a855f7]{ACTIVE_STYLE.upper()}[/bold #a855f7]\n"
         f"[muted]Skills:[/muted] {skills_txt}\n"
-        f"[muted]Comandos clave:[/muted] [yellow]/help[/yellow] • [yellow]/plan[/yellow] • [yellow]/loop[/yellow] • [yellow]/ctx[/yellow] • [yellow]/compact[/yellow] • "
+        f"[muted]{lbl_cmds}:[/muted] [yellow]/help[/yellow] • [yellow]/lang[/yellow] • [yellow]/plan[/yellow] • [yellow]/loop[/yellow] • [yellow]/ctx[/yellow] • [yellow]/compact[/yellow] • "
         f"[yellow]/style[/yellow] • [yellow]/game[/yellow] • [yellow]/3d[/yellow] • [yellow]/tool[/yellow] • [yellow]/preview[/yellow]"
     )
     console.print(Panel.fit(contenido, border_style="#6366f1", box=ROUNDED, padding=(0, 2)))
 
 
 def imprimir_ayuda():
-    t = Table(box=ROUNDED, border_style="#6366f1", title="[brand]Centro de Comandos AntiCli v2.6[/brand]", show_lines=False)
-    t.add_column("Comando / Atajo", style="bold #f59e0b", no_wrap=True)
-    t.add_column("Categoría", style="#38bdf8")
-    t.add_column("Descripción", style="white")
+    titulo = "[brand]Centro de Comandos AntiCli v2.6[/brand]" if ACTIVE_LANG == "es" else "[brand]AntiCli Command Center v2.6[/brand]"
+    col_cmd = "Comando / Atajo" if ACTIVE_LANG == "es" else "Command / Shortcut"
+    col_cat = "Categoría" if ACTIVE_LANG == "es" else "Category"
+    col_desc = "Descripción" if ACTIVE_LANG == "es" else "Description"
 
-    filas = [
-        ("/plan [on|off|status]", "Arquitectura", "Modo solo lectura: investiga y genera plan con todo_write sin tocar archivos"),
-        ("/loop [n]  |  /auto", "Ejecución Bucle", "Ejecuta de forma autónoma las tareas del plan paso a paso (def: 5 pasos)"),
-        ("/ctx  |  /tokens", "Telemetría KV", "Muestra el modelo real, contexto en llama.cpp, uso de KV cache y umbral"),
-        ("/compact [umbral%]", "Contexto", "Compacta la sesión con Cápsula de Continuidad o ajusta el umbral (def: 70%)"),
-        ("/skills [auto|all|toggle <id>]", "Agente", "Modo Bajo Demanda automático (ahorra tokens) o fijar skills manualmente"),
-        ("/style [auto|swiss|hud|glass|organic|arcade]", "Dirección Arte", "Cambia el paradigma estético para evitar diseños repetitivos"),
-        ("/view [full|compact|quiet]", "Visor en Vivo", "Controla si ves código nuevo, diffs, llamadas y consola en tiempo real"),
-        ("/show <archivo> [ini] [fin]", "Inspección", "Muestra cualquier archivo en consola con sintaxis coloreada"),
-        ("/check <archivo>", "Auditoría QA", "Valida sintaxis JS/HTML (con Node.js), Python o JSON en busca de errores"),
-        ("/map [ruta]", "Inspección", "Extrae el mapa de funciones, clases e IDs DOM sin leer todo el archivo"),
-        ("/memory [add <nota>|clear]", "Memoria", "Muestra o guarda notas persistentes del proyecto en .anticli_memory.md"),
-        ("/game <idea>", "Creación 2D", "Diseña y programa un juego 2D (60fps, partículas, audio WebAudio) y lo abre"),
-        ("/3d <idea>", "Creación 3D", "Diseña una escena o juego 3D / Voxel con Three.js, luces y Bloom"),
-        ("/tool <idea>", "Creación App", "Diseña y construye una herramienta con personalidad visual propia"),
-        ("/design <idea>", "Creación UI", "Crea una interfaz, estudio o dashboard con dirección de arte a medida"),
-        ("/preview [archivo.html]", "Entorno", "Inicia el servidor web local sin caché y abre tu proyecto en el navegador"),
-        ("/todo [add|done|clear]", "Plan en Vivo", "Muestra o actualiza la barra de progreso y tareas del agente"),
-        ("/undo", "Quirúrgico", "Deshace inmediatamente el último cambio de archivo (`write`/`edit`/`patch_lines`)"),
-        ("/diff  |  /status", "Git & Código", "Muestra el diff actual o el estado del repositorio Git"),
-        ("/tree", "Entorno", "Muestra el árbol visual de archivos del directorio actual"),
-        ("/save [archivo.md]", "Sesión", "Exporta la última respuesta del modelo a un archivo Markdown"),
-        ("/think", "Agente", "Alterna el bloque de pensamiento profundo (<|think|>) de Gemma 4"),
-        ("/model [nombre]", "Agente", "Muestra o cambia el modelo activo en el servidor"),
-        ("/reset", "Sesión", "Limpia por completo la memoria y el plan de tareas desde cero"),
-        ("/clear  |  /cls", "Consola", "Limpia la pantalla de la terminal sin borrar la memoria del agente"),
-        ("!<comando>", "Atajo Shell", "Ejecuta un comando directo en tu terminal sin gastar tokens"),
-        ("@<archivo> (con Tab)", "Contexto", "Inyecta el contenido de un archivo directamente en tu prompt"),
-    ]
+    t = Table(box=ROUNDED, border_style="#6366f1", title=titulo, show_lines=False)
+    t.add_column(col_cmd, style="bold #f59e0b", no_wrap=True)
+    t.add_column(col_cat, style="#38bdf8")
+    t.add_column(col_desc, style="white")
+
+    if ACTIVE_LANG == "en":
+        filas = [
+            ("/lang [es|en]", "Language", "Switch language between English and Spanish for TUI and model responses"),
+            ("/plan [on|off|status]", "Architecture", "Read-only mode: investigate & build roadmap with todo_write without writing files"),
+            ("/loop [n]  |  /auto", "Autonomous Loop", "Execute pending roadmap tasks step-by-step autonomously (default: 5 steps)"),
+            ("/ctx  |  /tokens", "KV Telemetry", "Show active model, llama.cpp context, KV cache usage and auto-compact threshold"),
+            ("/compact [threshold%]", "Context", "Compact session with Continuity Capsule or adjust threshold (default: 70%)"),
+            ("/skills [auto|all|toggle <id>]", "Agent", "On-Demand mode (saves tokens) or pin specialized skills permanently"),
+            ("/style [auto|swiss|hud|glass|organic|arcade]", "Art Direction", "Change visual design paradigm to prevent generic AI templates"),
+            ("/view [full|compact|quiet]", "Live Viewer", "Control real-time streaming of new code, diffs, tool calls and stdout"),
+            ("/show <file> [start] [end]", "Inspection", "Display any file in terminal with colored syntax highlighting"),
+            ("/check <file>", "QA Audit", "Validate JS/HTML (via Node.js), Python or JSON syntax for errors"),
+            ("/map [path]", "Inspection", "Extract class, function and DOM ID outline without reading full files"),
+            ("/memory [add <note>|clear]", "Memory", "View or persist project architectural notes in .anticli_memory.md"),
+            ("/game <idea>", "2D Creation", "Design and program a 2D game (60fps, particles, WebAudio sound) and preview it"),
+            ("/3d <idea>", "3D Creation", "Design a 3D WebGL / Voxel scene with Three.js, lighting and Bloom"),
+            ("/tool <idea>", "App Creation", "Design and build a functional tool with distinctive studio ergonomics"),
+            ("/design <idea>", "UI Creation", "Create an interface, dashboard or design system with custom art direction"),
+            ("/preview [file.html]", "Environment", "Start local zero-cache HTTP web server and launch preview in browser"),
+            ("/todo [add|done|clear]", "Live Plan", "View or update real-time plan progress and task checkmarks"),
+            ("/undo", "Surgical", "Immediately revert the last file change (write/edit/patch_lines)"),
+            ("/diff  |  /status", "Git & Code", "Show current git diff or repository status"),
+            ("/tree", "Environment", "Display visual directory file tree"),
+            ("/save [file.md]", "Session", "Export model's last response to a Markdown file"),
+            ("/think", "Agent", "Toggle Gemma 4 deep reasoning thought block (<|think|>)"),
+            ("/model [name]", "Agent", "Show or switch active model on the llama.cpp server"),
+            ("/reset", "Session", "Reset conversation context, turn log and task plan from scratch"),
+            ("/clear  |  /cls", "Console", "Clear terminal screen without clearing agent memory"),
+            ("!<command>", "Shell Shortcut", "Execute command directly in your OS terminal without spending tokens"),
+            ("@<file> (with Tab)", "Context", "Inject file contents directly into your prompt"),
+        ]
+    else:
+        filas = [
+            ("/lang [es|en]", "Idioma", "Alterna entre Español e Inglés en la interfaz y en las respuestas del agente"),
+            ("/plan [on|off|status]", "Arquitectura", "Modo solo lectura: investiga y genera plan con todo_write sin tocar archivos"),
+            ("/loop [n]  |  /auto", "Ejecución Bucle", "Ejecuta de forma autónoma las tareas del plan paso a paso (def: 5 pasos)"),
+            ("/ctx  |  /tokens", "Telemetría KV", "Muestra el modelo real, contexto en llama.cpp, uso de KV cache y umbral"),
+            ("/compact [umbral%]", "Contexto", "Compacta la sesión con Cápsula de Continuidad o ajusta el umbral (def: 70%)"),
+            ("/skills [auto|all|toggle <id>]", "Agente", "Modo Bajo Demanda automático (ahorra tokens) o fijar skills manualmente"),
+            ("/style [auto|swiss|hud|glass|organic|arcade]", "Dirección Arte", "Cambia el paradigma estético para evitar diseños repetitivos"),
+            ("/view [full|compact|quiet]", "Visor en Vivo", "Controla si ves código nuevo, diffs, llamadas y consola en tiempo real"),
+            ("/show <archivo> [ini] [fin]", "Inspección", "Muestra cualquier archivo en consola con sintaxis coloreada"),
+            ("/check <archivo>", "Auditoría QA", "Valida sintaxis JS/HTML (con Node.js), Python o JSON en busca de errores"),
+            ("/map [ruta]", "Inspección", "Extrae el mapa de funciones, clases e IDs DOM sin leer todo el archivo"),
+            ("/memory [add <nota>|clear]", "Memoria", "Muestra o guarda notas persistentes del proyecto en .anticli_memory.md"),
+            ("/game <idea>", "Creación 2D", "Diseña y programa un juego 2D (60fps, partículas, audio WebAudio) y lo abre"),
+            ("/3d <idea>", "Creación 3D", "Diseña una escena o juego 3D / Voxel con Three.js, luces y Bloom"),
+            ("/tool <idea>", "Creación App", "Diseña y construye una herramienta con personalidad visual propia"),
+            ("/design <idea>", "Creación UI", "Crea una interfaz, estudio o dashboard con dirección de arte a medida"),
+            ("/preview [archivo.html]", "Entorno", "Inicia el servidor web local sin caché y abre tu proyecto en el navegador"),
+            ("/todo [add|done|clear]", "Plan en Vivo", "Muestra o actualiza la barra de progreso y tareas del agente"),
+            ("/undo", "Quirúrgico", "Deshace inmediatamente el último cambio de archivo (`write`/`edit`/`patch_lines`)"),
+            ("/diff  |  /status", "Git & Código", "Muestra el diff actual o el estado del repositorio Git"),
+            ("/tree", "Entorno", "Muestra el árbol visual de archivos del directorio actual"),
+            ("/save [archivo.md]", "Sesión", "Exporta la última respuesta del modelo a un archivo Markdown"),
+            ("/think", "Agente", "Alterna el bloque de pensamiento profundo (<|think|>) de Gemma 4"),
+            ("/model [nombre]", "Agente", "Muestra o cambia el modelo activo en el servidor"),
+            ("/reset", "Sesión", "Limpia por completo la memoria y el plan de tareas desde cero"),
+            ("/clear  |  /cls", "Consola", "Limpia la pantalla de la terminal sin borrar la memoria del agente"),
+            ("!<comando>", "Atajo Shell", "Ejecuta un comando directo en tu terminal sin gastar tokens"),
+            ("@<archivo> (con Tab)", "Contexto", "Inyecta el contenido de un archivo directamente en tu prompt"),
+        ]
     for cmd, cat, desc in filas:
         t.add_row(cmd, cat, desc)
     console.print(t)
@@ -2273,13 +2354,19 @@ def procesar_adjuntos(user_input: str) -> str:
 # =====================================================================
 
 async def main():
-    global SESSION_CWD, VIEW_MODE, ACTIVE_STYLE, SKILLS_ON_DEMAND, COMPACT_THRESHOLD_PCT, HANDOFF_CAPSULE, PLAN_MODE
+    global SESSION_CWD, VIEW_MODE, ACTIVE_STYLE, SKILLS_ON_DEMAND, COMPACT_THRESHOLD_PCT, HANDOFF_CAPSULE, PLAN_MODE, ACTIVE_LANG
     SESSION_CWD = Path.cwd().resolve()
 
     parser = argparse.ArgumentParser(
         description="AntiCli v2.6: Entorno agéntico quirúrgico con visor en vivo, auto-compactación de contexto y skills bajo demanda."
     )
-    parser.add_argument("prompt", nargs="*", help="Prompt directo para ejecución de un solo turno.")
+    parser.add_argument("prompt", nargs="*", help="Prompt directo para ejecución de un solo turno / Direct prompt for single-turn execution.")
+    parser.add_argument(
+        "--lang",
+        choices=["es", "en"],
+        default=os.environ.get("ANTICLI_LANG", "es"),
+        help="Interface and model language: 'es' (Español) or 'en' (English) (default: es or $ANTICLI_LANG).",
+    )
     parser.add_argument(
         "--model",
         default=os.environ.get("ANTICLI_MODEL", os.environ.get("PI_MODEL", "gemma-4-26b-a4b-it")),
@@ -2304,6 +2391,7 @@ async def main():
     args = parser.parse_args()
 
     VIEW_MODE = args.view
+    ACTIVE_LANG = args.lang
     thinking_activo = not args.no_think
     modelo_actual = args.model
     base_url = args.base_url
@@ -2348,13 +2436,16 @@ async def main():
         else:
             ctx_str = ""
         nombre_corto = (SERVER_INFO.get("model_name") or modelo_actual)[:22]
+        lbl_v = "Vista" if ACTIVE_LANG == "es" else "View"
+        lbl_a = "Arte" if ACTIVE_LANG == "es" else "Art"
         return HTML(
             f" <b>AntiCli</b> <style fg='#94a3b8'>{nombre_corto}</style>{ctx_str} "
+            f"│ <style fg='#fbbf24'>{ACTIVE_LANG.upper()}</style> "
             f"│ Dir: <style fg='#38bdf8'>{SESSION_CWD.name or SESSION_CWD}</style> "
-            f"│ Vista: <style fg='#10b981'>{VIEW_MODE.upper()}</style> "
-            f"│ Arte: <style fg='#a855f7'>{ACTIVE_STYLE.upper()}</style> "
+            f"│ {lbl_v}: <style fg='#10b981'>{VIEW_MODE.upper()}</style> "
+            f"│ {lbl_a}: <style fg='#a855f7'>{ACTIVE_STYLE.upper()}</style> "
             f"│ Think: <style fg='#f59e0b'>{think_str}</style>"
-            f"{plan_str}{todos_str}{preview_str} │ <style fg='#64748b'>/plan • /loop • /help</style>"
+            f"{plan_str}{todos_str}{preview_str} │ <style fg='#64748b'>/lang • /plan • /loop • /help</style>"
         )
 
     session = PromptSession(
@@ -2410,6 +2501,30 @@ async def main():
                     if user_input in ["/clear", "/cls"]:
                         console.clear()
                         continue
+
+                    # --- IDIOMA / LANGUAGE (/lang) ---
+                    if user_input.startswith("/lang"):
+                        partes = user_input.split()
+                        if len(partes) > 1:
+                            sub_lang = partes[1].lower().strip()
+                            if sub_lang in ("es", "español", "spanish"):
+                                ACTIVE_LANG = "es"
+                            elif sub_lang in ("en", "english", "inglés", "ingles"):
+                                ACTIVE_LANG = "en"
+                            else:
+                                console.print("  [warn]Idiomas soportados / Supported languages: 'es' (Español), 'en' (English)[/warn]")
+                                continue
+                        else:
+                            ACTIVE_LANG = "en" if ACTIVE_LANG == "es" else "es"
+
+                        config = crear_config(modelo_actual, base_url, thinking_activo)
+                        msg_sw = (
+                            f"  [ok]🌐 Idioma cambiado a: ESPAÑOL. El agente responderá en español.[/ok]"
+                            if ACTIVE_LANG == "es"
+                            else f"  [ok]🌐 Language switched to: ENGLISH. The agent will respond in English.[/ok]"
+                        )
+                        console.print(msg_sw)
+                        break
 
                     # --- AYUDA ---
                     if user_input == "/help":
