@@ -1,3 +1,6 @@
+import logging
+logging.getLogger('google_genai').setLevel(logging.ERROR)
+logging.getLogger('google_genai.types').setLevel(logging.ERROR)
 import argparse
 import asyncio
 import difflib
@@ -2226,7 +2229,7 @@ async def main():
                             [
                                 ("class:cwd", f"\n{carpeta_corta} "),
                                 ("class:mode", f"{etiqueta_modo} "),
-                                ("class:prompt", "AntiCli ❯ "),
+                                ("class:prompt", "❯ "),
                             ],
                             style=prompt_style,
                         )
