@@ -33,9 +33,11 @@ pip install google-antigravity rich prompt_toolkit
 ```
 
 ### 3. Ejecución
+Simplemente escribe en cualquier terminal o consola de Windows:
 ```bash
-python anticli.py
+anticli
 ```
+*(O `AntiCli`, o `python anticli.py` desde el directorio fuente).*
 
 Opciones de línea de comandos:
 ```bash

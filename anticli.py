@@ -19,6 +19,11 @@ import webbrowser
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
+PACKAGE_DIR = Path(__file__).resolve().parent
+if str(PACKAGE_DIR) not in sys.path:
+    sys.path.insert(0, str(PACKAGE_DIR))
+
+
 from prompt_toolkit import PromptSession
 from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
 from prompt_toolkit.completion import Completer, Completion, PathCompleter, WordCompleter
@@ -2710,5 +2715,15 @@ async def main():
                 return
 
 
+def run_cli():
+    """Punto de entrada síncrono para el comando global `anticli` o `AntiCli`."""
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        pass
+    except SystemExit:
+        pass
+
+
 if __name__ == "__main__":
-    asyncio.run(main())
+    run_cli()
