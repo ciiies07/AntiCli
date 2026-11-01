@@ -162,9 +162,11 @@ def _truncate_output(text: str, max_chars: int = MAX_OUTPUT_CHARS) -> str:
 
 
 def _resolve_path(path: str) -> Path:
-    p = Path(path)
+    p = Path(path) if path and path.strip() else Path("index.html")
     if not p.is_absolute():
         p = (SESSION_CWD / p).resolve()
+    if p.is_dir():
+        p = p / "index.html"
     return p
 
 
@@ -493,7 +495,36 @@ def read(path: str, start_line: int = 1, end_line: int = 200) -> str:
         return f"Error leyendo {path}: {e}"
 
 
-def write(path: str, content: str) -> str:
+def _inferir_ruta_archivo(content: str) -> str:
+    """Infiere el nombre de archivo más adecuado cuando el LLM omite el parámetro 'path'."""
+    # A. Buscar si en el plan activo (AGENT_TODOS) se menciona un archivo
+    for t in AGENT_TODOS:
+        desc = t.get("description", "") or t.get("task", "")
+        m = re.search(r"[a-zA-Z0-9_\-\./\]+\.(html|js|css|py|json|md|txt)", desc, re.IGNORECASE)
+        if m:
+            return Path(m.group(0).strip()).name
+
+    # B. Si es HTML con <title>
+    m_title = re.search(r"<title>([^<]+)</title>", content, re.IGNORECASE)
+    if m_title:
+        title_raw = m_title.group(1).strip().lower()
+        title_slug = re.sub(r"[^\w\-_]", "_", title_raw)
+        title_slug = re.sub(r"_+", "_", title_slug).strip("_")
+        if title_slug:
+            return f"{title_slug}.html"
+
+    # C. Por contenido
+    if "<!DOCTYPE" in content.upper() or "<HTML" in content.upper():
+        return "index.html"
+    if re.search(r"^(import |def |class )", content, re.MULTILINE):
+        return "main.py"
+    if content.strip().startswith("{") and content.strip().endswith("}"):
+        return "data.json"
+
+    return "index.html"
+
+
+def write(path: str = "", content: str = "", filepath: str = "", filename: str = "", file: str = "") -> str:
     """Crea o sobrescribe un archivo completo con el contenido especificado.
     
     Args:
@@ -509,6 +540,11 @@ def write(path: str, content: str) -> str:
             "Error: El MODO PLAN está activo (solo lectura / arquitectura). "
             "No se permite crear o sobrescribir archivos. Usa 'todo_write' para estructurar el plan."
         )
+
+    # Si el LLM omitió 'path' o usó un alias alternativo, resolver o inferir
+    path = (path or filepath or filename or file or "").strip()
+    if not path:
+        path = _inferir_ruta_archivo(content)
 
     content, fue_limpiado = _limpiar_fences_llm(path, content)
     lines_count = len(content.splitlines())
@@ -1003,7 +1039,19 @@ def preview(target: str = "index.html", open_browser: bool = True) -> str:
             t = threading.Thread(target=PREVIEW_SERVER.serve_forever, daemon=True)
             t.start()
 
-        clean_target = target.lstrip("/\\")
+        clean_target = target.lstrip("/\\") if target else ""
+        if not clean_target or not (SESSION_CWD / clean_target).is_file():
+            # Buscar en archivos recién modificados
+            for f in reversed(LAST_MODIFIED_FILES):
+                if f.suffix.lower() == ".html" and f.is_file():
+                    clean_target = f.name
+                    break
+            else:
+                html_candidatos = list(SESSION_CWD.glob("*.html"))
+                if html_candidatos:
+                    clean_target = html_candidatos[0].name
+                elif not clean_target:
+                    clean_target = "index.html"
         url = f"http://127.0.0.1:{PREVIEW_PORT}/{clean_target}"
         console.print(
             f"  [tool.web]🚀 preview[/tool.web] Servidor local activo en: [bold underline cyan]{url}[/bold underline cyan]"
@@ -1526,7 +1574,7 @@ def construir_system_prompt(thinking: bool) -> str:
         f"Dispones de este arsenal de 15 herramientas:\n"
         f"- `bash(command, timeout)`: ejecuta comandos de consola, git, tests o scripts.\n"
         f"- `read(path, start_line, end_line)`: lee archivos mostrando líneas numeradas.\n"
-        f"- `write(path, content)`: crea o sobrescribe un archivo completo (NUNCA pongas bloques ``` dentro de `content`).\n"
+        f"- `write(path, content)`: crea o sobrescribe un archivo completo. SIEMPRE debes incluir 'path' con el nombre de archivo (ej. path='tetris.html', 'index.html', 'app.py') y 'content' con el código completo (NUNCA pongas bloques ``` dentro de `content`).\n"
         f"- `edit(path, old_text, new_text)`: realiza reemplazos quirúrgicos de texto.\n"
         f"- `patch_lines(path, start_line, end_line, new_content)`: reemplaza directamente un rango de líneas por número (útil en archivos grandes o si `edit` falla).\n"
         f"- `validate_code(path)`: verifica errores de sintaxis en archivos HTML/JS (usando Node.js), Python o JSON antes de darlos por terminados.\n"
@@ -1741,8 +1789,11 @@ async def ejecutar_turno(agent: Agent, mensaje: str, skills_inyectadas: set[str]
                 continue
 
             if isinstance(chunk, ToolResult):
-                if chunk.error:
-                    console.print(f"  [err]✗ Error en {chunk.name}: {chunk.error}[/err]")
+                err_msg = chunk.error
+                if not err_msg and isinstance(chunk.result, str) and chunk.result.lower().startswith("error"):
+                    err_msg = chunk.result
+                if err_msg:
+                    console.print(f"  [err]✗ Error en {chunk.name}: {err_msg}[/err]")
                 continue
 
             if isinstance(chunk, Text):
