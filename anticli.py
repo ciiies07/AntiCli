@@ -2131,7 +2131,7 @@ def imprimir_ayuda():
         ("/show <archivo> [ini] [fin]", "Inspección", "Muestra cualquier archivo en consola con sintaxis coloreada"),
         ("/check <archivo>", "Auditoría QA", "Valida sintaxis JS/HTML (con Node.js), Python o JSON en busca de errores"),
         ("/map [ruta]", "Inspección", "Extrae el mapa de funciones, clases e IDs DOM sin leer todo el archivo"),
-        ("/memory [add <nota>|clear]", "Memoria", "Muestra o guarda notas persistentes del proyecto en .pi_memory.md"),
+        ("/memory [add <nota>|clear]", "Memoria", "Muestra o guarda notas persistentes del proyecto en .anticli_memory.md"),
         ("/game <idea>", "Creación 2D", "Diseña y programa un juego 2D (60fps, partículas, audio WebAudio) y lo abre"),
         ("/3d <idea>", "Creación 3D", "Diseña una escena o juego 3D / Voxel con Three.js, luces y Bloom"),
         ("/tool <idea>", "Creación App", "Diseña y construye una herramienta con personalidad visual propia"),
@@ -2184,6 +2184,7 @@ def procesar_adjuntos(user_input: str) -> str:
 
 async def main():
     global SESSION_CWD, VIEW_MODE, ACTIVE_STYLE, SKILLS_ON_DEMAND, COMPACT_THRESHOLD_PCT, HANDOFF_CAPSULE, PLAN_MODE
+    SESSION_CWD = Path.cwd().resolve()
 
     parser = argparse.ArgumentParser(
         description="AntiCli v2.5: Entorno agéntico quirúrgico con visor en vivo, auto-compactación de contexto y skills bajo demanda."
