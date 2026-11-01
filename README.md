@@ -36,7 +36,6 @@ pip install google-antigravity rich prompt_toolkit
 ```bash
 python anticli.py
 ```
-*(También puedes usar `python pi_antigravity.py`, el cual incluye compatibilidad total hacia atrás).*
 
 Opciones de línea de comandos:
 ```bash
