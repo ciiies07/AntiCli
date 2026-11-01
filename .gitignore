@@ -7,7 +7,10 @@ __pycache__/
 scratch/
 *.tmp
 
-# Antigravity CLI runtime files
+# AntiCli runtime files
+.anticli_memory.md
+.anticli_history
+.anticli_backups/
 .pi_memory.md
 .pi_backups/
 .pi_antigravity_history

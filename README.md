@@ -1,10 +1,10 @@
-# π-antigravity (v2.5)
+# AntiCli (v2.5)
 
 > Entorno agéntico y TUI quirúrgico para modelos locales (Gemma 4, DeepSeek, Qwen) vía `llama.cpp` con visor en vivo, dirección de arte camaleónica, auto-compactación inteligente de contexto y modos Plan/Loop.
 
 ---
 
-## ✨ Características Principales
+## 🚀 Características Principales
 
 * **Arsenal de 15 Herramientas Quirúrgicas:** Edición precisa línea por línea (`patch_lines`, `edit`), lectura acotada con visor coloreado (`read`), inspección estructural de clases/DOM (`inspect_code`), validación estática de sintaxis HTML/JS/Python (`validate_code`), búsqueda de archivos y regex (`glob_files`, `grep_search`), búsqueda web en tiempo real (`web_search`, `web_fetch`), memoria persistente (`memory_store`) y comandos de terminal protegidos (`bash`).
 * **Telemetría KV en Vivo con `llama.cpp`:** Sincronización exacta en tiempo real con los endpoints nativos `/props` y `/slots` de `llama-server` para monitorear el tamaño de contexto (`n_ctx`), ocupación de caché KV y modelo real activo.
@@ -19,7 +19,7 @@
 
 ---
 
-## 🚀 Requisitos e Instalación
+## 📦 Requisitos e Instalación
 
 ### 1. Servidor local con `llama.cpp`
 Inicia tu servidor local de `llama.cpp` (por ejemplo, con Gemma 4, DeepSeek o Qwen):
@@ -34,37 +34,80 @@ pip install google-antigravity rich prompt_toolkit
 
 ### 3. Ejecución
 ```bash
-python pi_antigravity.py
+python anticli.py
 ```
+*(También puedes usar `python pi_antigravity.py`, el cual incluye compatibilidad total hacia atrás).*
 
 Opciones de línea de comandos:
 ```bash
-python pi_antigravity.py --base-url http://127.0.0.1:8080/v1 --view full
+python anticli.py --base-url http://127.0.0.1:8080/v1 --view full
 ```
+
+| Parámetro | Default | Descripción |
+| :--- | :--- | :--- |
+| `--model` | `$ANTICLI_MODEL` o `gemma-4-26b-a4b-it` | Nombre del modelo en el servidor (se autodetecta de llama.cpp si está disponible). |
+| `--base-url` | `$ANTICLI_BASE_URL` o `http://127.0.0.1:8080/v1` | URL base del servidor OpenAI / llama.cpp. |
+| `--view` | `full` | Modo visual de terminal: `full`, `compact`, `quiet`. |
+| `--no-think` | `False` | Inicia con el bloque de pensamiento (`<|think|>`) desactivado. |
 
 ---
 
-## ⌨️ Centro de Comandos TUI
+## 🛠️ Arsenal de Herramientas
+
+| Herramienta | Tipo | Propósito |
+| :--- | :--- | :--- |
+| `bash(command, timeout)` | Ejecución | Comandos de consola protegidos con timeout y árbol de procesos limpio. |
+| `read(path, start_line, end_line)` | Lectura | Muestra fragmentos acotados con números de línea para ahorrar contexto. |
+| `write(path, content)` | Escritura | Escritura completa de archivos con creación automática de directorios. |
+| `edit(path, old_text, new_text)` | Quirúrgica | Reemplazo exacto de fragmentos de código sin reescribir todo el archivo. |
+| `patch_lines(path, start, end, new)` | Quirúrgica | Reemplazo directo por rango de líneas cuando los textos son complejos. |
+| `validate_code(path)` | QA / Linter | Validación estática de sintaxis HTML/JS (Node.js), Python y JSON. |
+| `inspect_code(path)` | Inspección | Extrae firmas de clases, funciones y nodos DOM principales sin leer todo. |
+| `glob_files(pattern, path)` | Búsqueda | Localiza rutas de archivos según comodines. |
+| `grep_search(pattern, path)` | Búsqueda | Búsqueda regex con número de línea exacto en todo el proyecto. |
+| `todo_write(tasks_json)` | Planificación | Dibuja la barra de progreso y el checklist visual de tareas en la terminal. |
+| `todo_check(step_number, status)` | Planificación | Actualiza el estado de una tarea (`done` / `in_progress`). |
+| `web_search(query, max_results)` | Web | Búsqueda en DuckDuckGo en tiempo real para consultar APIs y librerías. |
+| `web_fetch(url)` | Web | Descarga limpia de contenido HTML o Markdown de cualquier sitio web. |
+| `memory_store(action, note)` | Memoria | Persistencia de preferencias del usuario y arquitectura en `.anticli_memory.md`. |
+| `preview(target, open_browser)` | Entorno | Servidor web HTTP local sin caché para probar aplicaciones en el navegador. |
+
+---
+
+## 🎮 Comandos de la Consola Interactiva
 
 | Comando | Categoría | Descripción |
 | :--- | :--- | :--- |
-| `/plan [on\|off\|status]` | Arquitectura | Modo solo lectura: investiga y genera plan con `todo_write` sin tocar archivos |
-| `/loop [n]` \| `/auto` | Ejecución Bucle | Ejecuta de forma autónoma las tareas del plan paso a paso (def: 5 pasos) |
-| `/ctx` \| `/tokens` | Telemetría KV | Muestra modelo real, contexto en `llama.cpp`, ocupación KV cache y umbral |
-| `/compact [umbral%]` | Contexto | Compacta la sesión con Cápsula de Continuidad o ajusta el umbral (def: 70%) |
-| `/skills [auto\|all\|toggle]` | Agente | Modo Bajo Demanda automático (ahorra tokens) o fijar skills manualmente |
-| `/style [preset]` | Dirección Arte | Cambia la estética (`classic`, `dungeon`, `cozy`, `gameboy`, `swiss`, `hud`, `glass`, `arcade`, `auto`) |
-| `/game <idea>` | Creación 2D | Diseña y programa un juego 2D con Game Loop, DeltaTime, partículas y WebAudio |
-| `/3d <idea>` | Creación 3D | Diseña una escena o juego 3D interactivo con Three.js, luces y Bloom |
-| `/tool <idea>` | Creación App | Diseña y construye una herramienta completa con arquitectura modular |
-| `/preview [archivo.html]` | Entorno | Inicia el servidor web local sin caché y abre el proyecto en el navegador |
-| `/check <archivo>` | Auditoría QA | Valida sintaxis HTML/JS (con Node.js), Python o JSON |
-| `/map [ruta]` | Inspección | Extrae mapa de funciones, clases e IDs DOM sin leer todo el archivo |
-| `/undo` | Quirúrgico | Deshace inmediatamente la última modificación de archivo |
-| `/clear` \| `/cls` | Consola | Limpia la pantalla de la terminal sin borrar la memoria del agente |
+| `/plan [on\|off\|status]` | Arquitectura | Modo solo lectura: investiga y genera plan con `todo_write` sin tocar archivos. |
+| `/loop [n]` o `/auto` | Ejecución Bucle | Ejecuta de forma autónoma las tareas del plan paso a paso (def: 5 pasos). |
+| `/ctx` o `/tokens` | Telemetría KV | Muestra modelo real, tokens ocupados en llama.cpp y barra de uso de KV cache. |
+| `/compact [umbral%]` | Contexto | Compacta la sesión con Cápsula de Continuidad o ajusta el umbral (def: 70%). |
+| `/skills [auto\|all\|toggle <id>]` | Agente | Modo Bajo Demanda automático (ahorro de tokens) o fijar skills fijas. |
+| `/style [auto\|swiss\|hud\|glass\|arc]` | Arte | Cambia el paradigma estético para evitar diseños repetitivos. |
+| `/view [full\|compact\|quiet]` | Visor | Alterna entre visualización completa, compacta o silenciosa. |
+| `/show <archivo> [ini] [fin]` | Inspección | Muestra un archivo en consola con sintaxis coloreada. |
+| `/check <archivo>` | Auditoría QA | Valida sintaxis JS/HTML (con Node.js), Python o JSON en busca de errores. |
+| `/map [ruta]` | Inspección | Extrae mapa de funciones, clases e IDs DOM sin leer todo el archivo. |
+| `/memory [add <nota>\|clear]` | Memoria | Muestra o guarda notas persistentes en `.anticli_memory.md`. |
+| `/game <idea>` | Creación 2D | Diseña y programa un juego 2D (60fps, partículas, audio WebAudio) y lo abre. |
+| `/3d <idea>` | Creación 3D | Diseña una escena o juego 3D con Three.js, luces y Bloom. |
+| `/tool <idea>` | Creación App | Diseña y construye una herramienta con personalidad visual propia. |
+| `/design <idea>` | Creación UI | Crea una interfaz o dashboard con dirección de arte a medida. |
+| `/preview [archivo.html]` | Entorno | Inicia el servidor web local sin caché y abre tu proyecto en el navegador. |
+| `/todo [add\|done\|clear]` | Plan en Vivo | Muestra o actualiza la barra de progreso y tareas del agente. |
+| `/undo` | Quirúrgico | Deshace inmediatamente el último cambio de archivo (`write`/`edit`/`patch_lines`). |
+| `/diff` o `/status` | Git | Muestra el diff actual o el estado del repositorio Git. |
+| `/tree` | Entorno | Muestra el árbol visual de archivos del directorio actual. |
+| `/save [archivo.md]` | Sesión | Exporta la última respuesta del modelo a un archivo Markdown. |
+| `/think` | Agente | Alterna el bloque de razonamiento profundo (`<|think|>`). |
+| `/model [nombre]` | Agente | Muestra o cambia el modelo activo en el servidor. |
+| `/reset` | Sesión | Limpia la memoria de conversación y el plan de tareas desde cero. |
+| `/clear` o `/cls` | Consola | Limpia la pantalla de la terminal sin borrar la memoria del agente. |
+| `!<comando>` | Atajo Shell | Ejecuta un comando directo en tu terminal sin gastar tokens. |
+| `@<archivo>` *(con Tab)* | Contexto | Inyecta el contenido de un archivo directamente en tu prompt. |
 
 ---
 
 ## 📄 Licencia
 
-MIT License.
+MIT License © 2026 ciiies07.
