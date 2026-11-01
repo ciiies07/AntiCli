@@ -2227,7 +2227,7 @@ async def main():
                         etiqueta_modo = f"[📋 PLAN]" if PLAN_MODE else f"[{icono_vista} {VIEW_MODE}]"
                         user_input = await session.prompt_async(
                             [
-                                ("class:cwd", f"\n{carpeta_corta} "),
+                                ("class:cwd", "\nAntiCli "),
                                 ("class:mode", f"{etiqueta_modo} "),
                                 ("class:prompt", "❯ "),
                             ],
