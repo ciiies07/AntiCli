@@ -16,6 +16,7 @@ import time
 import urllib.error
 import urllib.request
 import webbrowser
+from concurrent.futures import ThreadPoolExecutor
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
@@ -1000,6 +1001,99 @@ def web_fetch(url: str) -> str:
         return f"Error descargando {url}: {e}"
 
 
+def browser_action(
+    url: str,
+    action: str = "extract",
+    selector: str = "",
+    value: str = "",
+    screenshot: str = "",
+    timeout: int = 15,
+) -> str:
+    """Navega por sitios web usando un navegador Chromium real (Playwright), interactúa con elementos dinámicos JS y extrae contenido o capturas.
+    
+    Args:
+        url: Dirección web completa a cargar (ej. 'https://news.ycombinator.com', 'http://127.0.0.1:8080').
+        action: Acción a realizar: 'extract' (extrae texto visible de la página o selector), 'screenshot' (guarda captura de pantalla), 'click' (hace click en un selector y extrae el resultado), 'fill' (escribe value en el selector), o 'eval' (ejecuta código JavaScript).
+        selector: Selector CSS opcional para acotar la acción o extracción (ej. 'main', '#content', 'button.submit', 'input[name="q"]').
+        value: Texto a escribir si action='fill', o código JS si action='eval'.
+        screenshot: Ruta donde guardar la captura si se desea imagen (ej. 'screenshot.png').
+        timeout: Tiempo máximo de espera en segundos (por defecto 15s).
+    """
+    cb = _registrar_llamada_herramienta("browser_action")
+    if cb:
+        return cb
+    if VIEW_MODE != "quiet":
+        sel_txt = f" [{selector}]" if selector else ""
+        console.print(f"  [tool.web]🌐 browser_action[/tool.web] [bold white]{action}[/bold white]{sel_txt} → [accent]{url}[/accent]")
+
+    def _worker():
+        try:
+            from playwright.sync_api import sync_playwright
+        except ImportError:
+            return "Error: Playwright no está instalado en este entorno de Python. Ejecuta: pip install playwright && playwright install chromium"
+
+        try:
+            with sync_playwright() as p:
+                browser = p.chromium.launch(headless=True)
+                context = browser.new_context(
+                    viewport={"width": 1280, "height": 800},
+                    user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
+                )
+                page = context.new_page()
+                page.goto(url, timeout=timeout * 1000, wait_until="domcontentloaded")
+
+                if action == "screenshot":
+                    dest = _resolve_path(screenshot or "screenshot.png")
+                    dest.parent.mkdir(parents=True, exist_ok=True)
+                    page.screenshot(path=str(dest), full_page=False)
+                    title = page.title()
+                    browser.close()
+                    return f"Captura de pantalla guardada exitosamente en: {dest}\nTítulo de la página: {title}\nURL: {page.url}"
+
+                elif action == "click":
+                    if not selector:
+                        browser.close()
+                        return "Error: Debes especificar el parámetro 'selector' (ej. button.submit) para la acción 'click'."
+                    page.click(selector, timeout=timeout * 1000)
+                    page.wait_for_timeout(1000)
+
+                elif action == "fill":
+                    if not selector:
+                        browser.close()
+                        return "Error: Debes especificar el parámetro 'selector' (ej. input#search) para la acción 'fill'."
+                    page.fill(selector, value, timeout=timeout * 1000)
+                    page.wait_for_timeout(500)
+
+                elif action == "eval":
+                    res = page.evaluate(value or "document.title")
+                    browser.close()
+                    return f"Resultado de evaluar JS:\n{res}"
+
+                # Default o tras click/fill: extracción de contenido visible
+                title = page.title()
+                if selector:
+                    loc = page.locator(selector)
+                    count = loc.count()
+                    if count == 0:
+                        text_content = f"(No se encontró ningún elemento con el selector: '{selector}')"
+                    else:
+                        text_content = "\n".join([loc.nth(i).inner_text().strip() for i in range(min(count, 15)) if loc.nth(i).inner_text().strip()])
+                else:
+                    text_content = page.locator("body").inner_text()
+
+                browser.close()
+                header = f"Título: {title}\nURL: {page.url}\n\nContenido extraído:\n"
+                return _truncate_output(header + text_content, max_chars=12000)
+        except Exception as e:
+            return f"Error en browser_action ({action} en {url}): {e}"
+
+    try:
+        with ThreadPoolExecutor(max_workers=1) as pool:
+            return pool.submit(_worker).result(timeout=timeout + 5)
+    except Exception as e:
+        return f"Tiempo de espera agotado o error en browser_action: {e}"
+
+
 class _DynamicQuietHTTPHandler(SimpleHTTPRequestHandler):
     """Sirve siempre desde el SESSION_CWD actual y desactiva caché para que los cambios en juegos/apps se vean al instante."""
 
@@ -1311,6 +1405,7 @@ ALL_TOOLS = [
     todo_check,
     web_search,
     web_fetch,
+    browser_action,
     memory_store,
     preview,
 ]
@@ -1592,6 +1687,7 @@ def construir_system_prompt(thinking: bool) -> str:
         f"- `todo_check(step_number, status)`: marca un paso del plan como 'done' o 'in_progress' (actualiza el progreso en pantalla al instante).\n"
         f"- `web_search(query, max_results)`: busca en internet en tiempo real (documentación, librerías, APIs).\n"
         f"- `web_fetch(url)`: descarga el texto de una URL específica.\n"
+        f"- `browser_action(url, action, selector, value, screenshot)`: navega con un navegador Chromium real (Playwright), renderiza sitios web dinámicos con JavaScript, extrae texto, interactúa (click, fill) o toma capturas de pantalla.\n"
         f"- `memory_store(action, note)`: lee o guarda notas persistentes del proyecto en `.anticli_memory.md`.\n"
         f"- `preview(target, open_browser)`: levanta un servidor web local y abre el juego o herramienta en el navegador.\n\n"
         f"Reglas de oro universales:\n"

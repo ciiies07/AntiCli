@@ -6,7 +6,7 @@
 
 ## 🚀 Características Principales
 
-* **Arsenal de 15 Herramientas Quirúrgicas:** Edición precisa línea por línea (`patch_lines`, `edit`), lectura acotada con visor coloreado (`read`), inspección estructural de clases/DOM (`inspect_code`), validación estática de sintaxis HTML/JS/Python (`validate_code`), búsqueda de archivos y regex (`glob_files`, `grep_search`), búsqueda web en tiempo real (`web_search`, `web_fetch`), memoria persistente (`memory_store`) y comandos de terminal protegidos (`bash`).
+* **Arsenal de 16 Herramientas Quirúrgicas:** Edición precisa línea por línea (`patch_lines`, `edit`), lectura acotada con visor coloreado (`read`), inspección estructural de clases/DOM (`inspect_code`), validación estática de sintaxis HTML/JS/Python (`validate_code`), búsqueda de archivos y regex (`glob_files`, `grep_search`), búsqueda web en tiempo real (`web_search`, `web_fetch`), navegador Chromium headless interactivo con Playwright (`browser_action`), memoria persistente (`memory_store`) y comandos de terminal protegidos (`bash`).
 * **Telemetría KV en Vivo con `llama.cpp`:** Sincronización exacta en tiempo real con los endpoints nativos `/props` y `/slots` de `llama-server` para monitorear el tamaño de contexto (`n_ctx`), ocupación de caché KV y modelo real activo.
 * **Auto-Compactación con Cápsula de Continuidad (Umbral 70%):** Cuando la sesión alcanza el 70% del contexto del slot, genera automáticamente un resumen ligero estructurado (plan, archivos tocados, notas clave) y libera la memoria KV sin perder el hilo de la conversación.
 * **Circuit Breaker Anti-Desborde de Tokens:** Límite de seguridad por turno para evitar bucles autónomos de reintentos infinitos, protegiendo la ventana de contexto de modelos locales.
