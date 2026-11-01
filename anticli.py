@@ -531,7 +531,7 @@ def _inferir_ruta_archivo(content: str) -> str:
     return "index.html"
 
 
-def write(path: str = "", content: str = "", filepath: str = "", filename: str = "", file: str = "", **kwargs) -> str:
+def write(path: str, content: str) -> str:
     """Crea o sobrescribe un archivo completo con el contenido especificado.
     
     Args:
@@ -548,16 +548,10 @@ def write(path: str = "", content: str = "", filepath: str = "", filename: str =
             "No se permite crear o sobrescribir archivos. Usa 'todo_write' para estructurar el plan."
         )
 
-    # Si el LLM omitió 'path' o usó un alias alternativo, resolver o inferir
-    # Si el LLM usó otro nombre en kwargs (ej. target, name, file_path)
-    if not path:
-        for k in ("target", "name", "file_path", "filename", "filepath", "file"):
-            if k in kwargs and kwargs[k]:
-                path = str(kwargs[k]).strip()
-                break
-    path = (path or filepath or filename or file or "").strip()
-    if not path:
+    # Si por alguna anomalía el modelo omitió o pasó vacío path
+    if not path or not str(path).strip():
         path = _inferir_ruta_archivo(content)
+    path = str(path).strip()
 
     content, fue_limpiado = _limpiar_fences_llm(path, content)
     lines_count = len(content.splitlines())
